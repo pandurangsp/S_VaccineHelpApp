@@ -1,0 +1,21 @@
+{
+  "name": "SampleApp",
+  "version": "1.0.0",
+  "description": "An Oracle JavaScript Extension Toolkit(JET) web app",
+  "dependencies": {
+    "@oracle/oraclejet": "~10.1.0"
+  },
+  "devDependencies": {
+    "@oracle/oraclejet-tooling": "~10.1.0",
+    "electron": "^12.0.7"
+  },
+  "engines": {
+    "node": ">=10.13.0"
+  },
+  "private": true,
+  "scripts": {
+    "prestart": "npm install",
+    "start": "ojet clean web && ojet build && electron ."
+  },
+  "main": "main.js"
+}
