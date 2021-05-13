@@ -47,12 +47,13 @@
     <div class="oj-flex-item oj-sm-12 oj-sm-justify-content-center">
       <div class="oj-flex oj-sm-justify-content-center">
         <oj-input-text class="oj-sm-6" value="{{pincode}}" on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
-        <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get Details
+        <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get
+          Details
         </oj-button>
       </div>
     </div>
     <oj-bind-if test="[[isBusy()]]">
-      <oj-progress-circle class="oj-flex-item" size='lg' value='-1'></oj-progress-circle>
+      <oj-progress-circle class="oj-flex-item" size='lg' value='-1' style="margin-top:5em;"></oj-progress-circle>
     </oj-bind-if>
     <oj-bind-if test="[[!isBusy()]]">
       <oj-bind-if test="{{centers().length>0}}">
@@ -71,23 +72,28 @@
                 columns="[[$current.data.columns]]">
                 <template slot="addressRenderer" data-oj-as="cell">
                   <div>
-                    <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
-                      <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
-
-                      <!-- <span style="padding:2px 0 0 0 !important;">
-                              <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>
-                            </span> -->
-                    </p>
+                    <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
+                      <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
+                        <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
+                      </p>
+                      <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
+                          <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>
+                        </p>
+                    </oj-bind-if>
                   </div>
                 </template>
                 <template slot="valRenderer" data-oj-as="cell">
                   <div>
-                    <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.2em',margin:'0'}]]">
-                      <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
-                    </p>
-                    <p style="font-size:0.7em;margin:0;">
-                      <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
-                    </p>
+                    <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
+                      <p>
+                        <span :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.25em 1em',marginLeft:'1em'}]]">
+                          <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
+                        </span>
+                      </p>
+                      <p style="font-size:0.7em;margin:0;">
+                        <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
+                      </p>
+                    </oj-bind-if>
                   </div>
                 </template>
               </oj-table>

@@ -67,6 +67,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.centers = ko.observableArray([]);
               this.isBusy = ko.observable(false);
               this.frmDate = new Date();
+              this.weeksDatesColumns = [];
               this.prevDsbld = ko.observable(true);
               this.messages = ko.observableArray([]);
               this.messagesDataprovider = new ArrayDataProvider(this.messages);
@@ -85,11 +86,24 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
               this.pincodeChangeLsnr = (evt) => {
                 this.frmDate = new Date();
+                this.prevDsbld(true);
                 this.stopInterval();
               }
 
-              this.stopInterval = () => {
+              this.populateWeeksDates = (frmDt) => {
+                this.weeksDatesColumns = [];
+                let date = new Date(frmDt);
+                this.weeksDatesColumns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled","style": "white-space:normal;word-wrap:break-word; text-align: center;vertical-align: middle;width:10%;" })
+                let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
+                this.weeksDatesColumns.push({headerText:dt.replace(/\//ig, '-'),field:dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled"});
+                for (let i = 0; i <= 5; i++) {
+                  date.setDate(date.getDate() + 1);
+                  let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
+                  this.weeksDatesColumns.push({headerText:dt.replace(/\//ig, '-'),field:dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled"});
+                }
+              }
 
+              this.stopInterval = () => {
                 if (this.getDataHandler) {
                   console.log("CLEARING INTERVALS");
                   clearInterval(this.getDataHandler);
@@ -101,63 +115,64 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
               this.getVaccineDetails = () => {
                 try {
-                  this.isBusy(true)
-                  this.centers([]);
-                  var w = new Worker('./js/worker/getVaccineSessions.js');
-                  let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(this.frmDate);
-                  this.getDataHandler = setInterval(() => { //this.isBusy(true); 
-                    w.postMessage({ 'pincode': this.pincode(), 'date': dt.replace(/\//ig, '-') });
-                  }, 3000);
+                  if (this.pincode() && this.pincode().length > 0) {
+                    this.isBusy(true)
+                    this.centers([]);
+                    //
+                    var w = new Worker('./js/worker/getVaccineSessions.js');
+                    let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(this.frmDate);
+                    this.getDataHandler = setInterval(() => { //this.isBusy(true); 
+                      w.postMessage({ 'pincode': this.pincode(), 'date': dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
+                    }, 3000);
 
-                  w.onmessage = (event) => {
-                    if (event.data == "error") {
-                      this.stopInterval();
-                      this.messages([]);
-                      let errObj = {
-                        severity: "error",
-                        summary: "Error",
-                        detail: "Could not get data",
-                        timestamp: new Date().toLocaleString()
-                      }
-                      this.messages.push(errObj);
-                    }
-                    else {
-
-                      let centers = event.data.centers.map(center => {
-                        let sessions = {};
-                        let columns = [];
-                        columns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled" })
-                        center.sessions.map(session => {
-                          let obj = {};
-                          obj["address"] = center.name + "-" + center.address;
-                          obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine;
-
-                          sessions = { ...sessions, ...obj };
-                          columns.push({ "headerText": session.date, "field": session.date, "template": "valRenderer", "sortable": "disabled" })
-
-                        });
-
-                        center.columns = columns;
-                        center.sessions = [sessions];
-                        return center;
-                      })
-
-                      if (centers.length > 0) {
-                        this.centers(centers);
-                      }
-                      else {
+                    w.onmessage = (event) => {
+                      if (event.data == "error") {
                         this.stopInterval();
                         this.messages([]);
                         let errObj = {
-                          severity: "info",
-                          summary: "Information",
-                          detail: "No sessions available for the selected date "+this.frmDate+". Showing previous week's data",
+                          severity: "error",
+                          summary: "Error",
+                          detail: "Could not get data",
                           timestamp: new Date().toLocaleString()
                         }
                         this.messages.push(errObj);
-                        this.getPrevWeekData();
                       }
-                      this.isBusy(false);
+                      else {
+                        let centers = event.data.centers.map(center => {
+                          let sessions = {};
+                          center.sessions.map(session => {
+                            let obj = {};
+                            obj["address"] = center.name + "-" + center.address;
+                            obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine;
+
+                            sessions = { ...sessions, ...obj };
+                            //columns.push({ "headerText": session.date, "field": session.date, "template": "valRenderer", "sortable": "disabled" })
+
+                          });
+
+                          center.columns = this.weeksDatesColumns;
+                          center.sessions = [sessions];
+                          
+                          return center;
+                        })
+                        console.log("CENTERS ARE ",centers);
+                        if (centers.length > 0) {
+                          this.centers(centers);
+                        }
+                        else {
+                          this.stopInterval();
+                          this.messages([]);
+                          let errObj = {
+                            severity: "info",
+                            summary: "Information",
+                            detail: "No sessions available for the selected date " + this.frmDate + ". Showing previous week's data",
+                            timestamp: new Date().toLocaleString()
+                          }
+                          this.messages.push(errObj);
+                          this.getPrevWeekData();
+                        }
+                        this.isBusy(false);
+                      }
                     }
                   }
                 }
@@ -176,24 +191,29 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               }
 
               this.getNextWeekData = () => {
-                this.stopInterval();
+                console.log("GETTING NEXT WEEEK DETAILS")
+                this.stopInterval();                
                 this.frmDate.setDate(this.frmDate.getDate() + 7);
+                this.populateWeeksDates(this.frmDate);
                 this.prevDsbld(false);
                 this.getVaccineDetails();
-
               }
 
               this.getPrevWeekData = () => {
+                console.log("GETTING PREV WEEEK DETAILS")
                 this.stopInterval();
-
                 if (!this.frmDate.getDate() - 7 < new Date().getDate()) {
                   this.frmDate.setDate(this.frmDate.getDate() - 7);
-                  if (!this.frmDate.getDate() == new Date().getDate()) {
+                  this.populateWeeksDates(this.frmDate);
+                  if (this.frmDate.getDate() == new Date().getDate()) {
                     this.prevDsbld(true);
                   }
                   this.getVaccineDetails();
                 }
               }
+
+              this.populateWeeksDates(this.frmDate);
+
             }
           }
 
