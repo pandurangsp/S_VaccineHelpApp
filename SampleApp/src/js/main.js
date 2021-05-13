@@ -67,7 +67,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.centers = ko.observableArray([]);
               this.isBusy = ko.observable(false);
               this.frmDate = new Date();
-              this.prevDsbld = ko.observable(false);
+              this.prevDsbld = ko.observable(true);
               this.messages = ko.observableArray([]);
               this.messagesDataprovider = new ArrayDataProvider(this.messages);
 
@@ -83,8 +83,13 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.getDataHandler = null;
               this.adp = ArrayDataProvider;
 
+              this.pincodeChangeLsnr = (evt) => {
+                this.frmDate = new Date();
+                this.stopInterval();
+              }
+
               this.stopInterval = () => {
-                console.log("INTERVAL ", this.getDataHandler);
+
                 if (this.getDataHandler) {
                   console.log("CLEARING INTERVALS");
                   clearInterval(this.getDataHandler);
@@ -105,7 +110,6 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                   }, 3000);
 
                   w.onmessage = (event) => {
-                    console.log("EVENT DATA ", event, event.data);
                     if (event.data == "error") {
                       this.stopInterval();
                       this.messages([]);
@@ -122,14 +126,14 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                       let centers = event.data.centers.map(center => {
                         let sessions = {};
                         let columns = [];
-                        columns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer","sortable":"disabled" })
+                        columns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled" })
                         center.sessions.map(session => {
                           let obj = {};
                           obj["address"] = center.name + "-" + center.address;
                           obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine;
 
                           sessions = { ...sessions, ...obj };
-                          columns.push({ "headerText": session.date, "field": session.date, "template": "valRenderer","sortable":"disabled" })
+                          columns.push({ "headerText": session.date, "field": session.date, "template": "valRenderer", "sortable": "disabled" })
 
                         });
 
@@ -138,7 +142,21 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                         return center;
                       })
 
-                      this.centers(centers);
+                      if (centers.length > 0) {
+                        this.centers(centers);
+                      }
+                      else {
+                        this.stopInterval();
+                        this.messages([]);
+                        let errObj = {
+                          severity: "info",
+                          summary: "Information",
+                          detail: "No sessions available for the selected date "+this.frmDate+". Showing previous week's data",
+                          timestamp: new Date().toLocaleString()
+                        }
+                        this.messages.push(errObj);
+                        this.getPrevWeekData();
+                      }
                       this.isBusy(false);
                     }
                   }
@@ -162,15 +180,19 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.frmDate.setDate(this.frmDate.getDate() + 7);
                 this.prevDsbld(false);
                 this.getVaccineDetails();
+
               }
 
               this.getPrevWeekData = () => {
                 this.stopInterval();
-                this.frmDate.setDate(this.frmDate.getDate() - 7);
-                if (this.frmDate.getDate() == new Date().getDate()) {
-                  this.prevDsbld(true);
+
+                if (!this.frmDate.getDate() - 7 < new Date().getDate()) {
+                  this.frmDate.setDate(this.frmDate.getDate() - 7);
+                  if (!this.frmDate.getDate() == new Date().getDate()) {
+                    this.prevDsbld(true);
+                  }
+                  this.getVaccineDetails();
                 }
-                this.getVaccineDetails();
               }
             }
           }

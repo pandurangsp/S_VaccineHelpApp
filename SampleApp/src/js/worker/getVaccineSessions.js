@@ -11,7 +11,6 @@ onmessage=async (event)=>{
     })
     .then(data => postMessage(data))
     .catch((e)=>{
-        console.log("ERROR ",e);
         postMessage("error")
     })
 }

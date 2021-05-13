@@ -43,31 +43,31 @@
 <body>
   <oj-messages messages="[[messagesDataprovider]]" position="{}" display="general" display-options.category="none"></oj-messages>
 
-  <div class="oj-flex oj-sm-flex-direction-column">
-    <div class="oj-flex-item">
-      <div class="oj-flex oj-sm-6 oj-sm-justify-content-space-between">
-        <oj-input-text class="oj-sm-8" value="{{pincode}}" on-value-changed="[[stopInterval]]" disabled="{{isBusy}}"></oj-input-text>
-        <oj-button class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get Details
-          <oj-bind-if test="[[isBusy()]]">
-            <oj-progress-circle slot="startIcon" size='sm' value='-1'></oj-progress-circle>
-          </oj-bind-if>
+  <div style="padding:2em;" class="oj-flex oj-sm-flex-direction-column oj-sm-align-items-center oj-sm-justify-content-center oj-sm-flex-items-initial">
+    <div class="oj-flex-item oj-sm-12 oj-sm-justify-content-center">
+      <div class="oj-flex oj-sm-justify-content-center">
+        <oj-input-text class="oj-sm-6" value="{{pincode}}" on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
+        <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get Details
         </oj-button>
       </div>
     </div>
+    <oj-bind-if test="[[isBusy()]]">
+      <oj-progress-circle class="oj-flex-item" size='lg' value='-1'></oj-progress-circle>
+    </oj-bind-if>
     <oj-bind-if test="[[!isBusy()]]">
       <oj-bind-if test="{{centers().length>0}}">
-        <div class="oj-flex-item">
+        <div class="oj-flex-item" style="margin:1em 0;">
           <oj-button disabled="{{prevDsbld}}" on-oj-action="[[getPrevWeekData]]">
             <oj-bind-text value="[[prevDsbld() ? 'Current Week' : 'Previous Week']]"></oj-bind-text>
           </oj-button>
           <oj-button on-oj-action="[[getNextWeekData]]">Next week</oj-button>
         </div>
       </oj-bind-if>
-      <div class="oj-flex-item">
+      <div class="oj-flex-item oj-sm-10">
         <div class="oj-flex oj-sm-flex-direction-column">
           <oj-bind-for-each data="{{centersADP}}">
             <template>
-              <oj-table style="width:100%;margin-bottom:1em;max-height: 10em;" class="oj-flex-item" data="[[new adp($current.data.sessions)]]"
+              <oj-table style="width:100%;margin-bottom:1em;max-height: 10em;" data="[[new adp($current.data.sessions)]]"
                 columns="[[$current.data.columns]]">
                 <template slot="addressRenderer" data-oj-as="cell">
                   <div>
@@ -82,7 +82,7 @@
                 </template>
                 <template slot="valRenderer" data-oj-as="cell">
                   <div>
-                    <p :style="[[{fontWeight:'bold',color:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.2em',margin:'0'}]]">
+                    <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.2em',margin:'0'}]]">
                       <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
                     </p>
                     <p style="font-size:0.7em;margin:0;">
