@@ -1,0 +1,13 @@
+.oj-table-column-header-cell{
+    background: #3b3b6d !important;
+}
+
+.oj-table-column-header-text{
+    color: #fff !important;
+    font-weight: bold;
+    font-size: 1.25em;
+}
+
+.oj-table-data-cell{
+    background: #9998a6 !important;
+}

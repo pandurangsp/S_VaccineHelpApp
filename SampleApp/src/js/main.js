@@ -55,71 +55,122 @@
   );
 }());
 
-require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider',
-'ojs/ojknockout','ojs/ojinputtext','ojs/ojbutton','ojs/ojtable','ojs/ojprogress-circle'],
-  function (Bootstrap, Context, ko,ArrayDataProvider) {
+require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider', 'ojs/ojmessages',
+  'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle'],
+  function (Bootstrap, Context, ko, ArrayDataProvider) {
     Bootstrap.whenDocumentReady().then(
       function () {
         function init() {
           class viewModel {
             constructor() {
-              this.pincode=ko.observable("");
-              this.centers=ko.observableArray([]);
-              this.isBusy=ko.observable(false);
+              this.pincode = ko.observable("");
+              this.centers = ko.observableArray([]);
+              this.isBusy = ko.observable(false);
+              this.frmDate = new Date();
+              this.prevDsbld = ko.observable(false);
+              this.messages = ko.observableArray([]);
+              this.messagesDataprovider = new ArrayDataProvider(this.messages);
 
-              this.sessionTblCol=[{
-                "headerText":"Available Capacity",
-                "field":"available_capacity"
+              this.sessionTblCol = [{
+                "headerText": "Available Capacity",
+                "field": "available_capacity"
               },
               {
-                "headerText":"Date",
-                "field":"date"
+                "headerText": "Date",
+                "field": "date"
               }]
-              this.centersADP= new ArrayDataProvider(this.centers,{keyAttributes:'center_id'});
-              this.getDataHandler=null;
-              this.adp=ArrayDataProvider;
+              this.centersADP = new ArrayDataProvider(this.centers, { keyAttributes: 'center_id' });
+              this.getDataHandler = null;
+              this.adp = ArrayDataProvider;
 
-              this.stopInterval=()=>{
-                if(this.getDataHandler){
+              this.stopInterval = () => {
+                console.log("INTERVAL ", this.getDataHandler);
+                if (this.getDataHandler) {
+                  console.log("CLEARING INTERVALS");
                   clearInterval(this.getDataHandler);
                 }
                 this.centers([]);
+                this.isBusy(false);
               }
 
-              this.getVaccineDetails = ()=>{
-                this.isBusy(true)
-                this.centers([]);
-                var w = new Worker('./js/worker/getVaccineSessions.js');
-                this.getDataHandler=setInterval(() => { this.isBusy(true);w.postMessage(this.pincode()); }, 3000);
-                w.onmessage = (event) => {
-                  if(event.data=="error"){
-                    clearInterval(this.getDataHandler);
+
+              this.getVaccineDetails = () => {
+                try {
+                  this.isBusy(true)
+                  this.centers([]);
+                  var w = new Worker('./js/worker/getVaccineSessions.js');
+                  let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(this.frmDate);
+                  this.getDataHandler = setInterval(() => { //this.isBusy(true); 
+                    w.postMessage({ 'pincode': this.pincode(), 'date': dt.replace(/\//ig, '-') });
+                  }, 3000);
+
+                  w.onmessage = (event) => {
+                    console.log("EVENT DATA ", event, event.data);
+                    if (event.data == "error") {
+                      this.stopInterval();
+                      this.messages([]);
+                      let errObj = {
+                        severity: "error",
+                        summary: "Error",
+                        detail: "Could not get data",
+                        timestamp: new Date().toLocaleString()
+                      }
+                      this.messages.push(errObj);
+                    }
+                    else {
+
+                      let centers = event.data.centers.map(center => {
+                        let sessions = {};
+                        let columns = [];
+                        columns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer","sortable":"disabled" })
+                        center.sessions.map(session => {
+                          let obj = {};
+                          obj["address"] = center.name + "-" + center.address;
+                          obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine;
+
+                          sessions = { ...sessions, ...obj };
+                          columns.push({ "headerText": session.date, "field": session.date, "template": "valRenderer","sortable":"disabled" })
+
+                        });
+
+                        center.columns = columns;
+                        center.sessions = [sessions];
+                        return center;
+                      })
+
+                      this.centers(centers);
+                      this.isBusy(false);
+                    }
                   }
-                  else{                   
-
-                    let centers=event.data.centers.map(center=>{
-                      let sessions={};
-                      let columns=[];
-                      columns.push({"headerText":"Address","field":"address","template":"addressRenderer"})
-                      center.sessions.map(session=>{
-                        let obj={};
-                        obj["address"]=center.name+"-"+center.address;
-                        obj[session.date]=session.available_capacity+"-"+session.min_age_limit+"-"+session.vaccine;
-                        
-                        sessions={...sessions,...obj};                        
-                        columns.push({"headerText":session.date,"field":session.date,"template":"valRenderer"})
-                        
-                      });
-                      
-                      center.columns=columns;
-                      center.sessions=[sessions];
-                      return center;
-                    })
-
-                    this.centers(centers);
-                    this.isBusy(false);
-                  }                  
                 }
+                catch (e) {
+                  console.log(e);
+                  this.stopInterval();
+                  this.messages([]);
+                  let errObj = {
+                    severity: "error",
+                    summary: "Error",
+                    detail: e,
+                    timestamp: new Date().toLocaleString()
+                  }
+                  this.messages.push(errObj);
+                }
+              }
+
+              this.getNextWeekData = () => {
+                this.stopInterval();
+                this.frmDate.setDate(this.frmDate.getDate() + 7);
+                this.prevDsbld(false);
+                this.getVaccineDetails();
+              }
+
+              this.getPrevWeekData = () => {
+                this.stopInterval();
+                this.frmDate.setDate(this.frmDate.getDate() - 7);
+                if (this.frmDate.getDate() == new Date().getDate()) {
+                  this.prevDsbld(true);
+                }
+                this.getVaccineDetails();
               }
             }
           }

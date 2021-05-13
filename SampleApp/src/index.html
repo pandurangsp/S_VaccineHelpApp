@@ -32,6 +32,7 @@
   <link rel="icon" type="image/x-icon" href="css/images/favicon.ico">
   <link rel="apple-touch-icon-precomposed" href="css/images/touchicon.png">
   <meta name="apple-mobile-web-app-title" content="Oracle JET">
+  <link rel="stylesheet" href="css/styles.css" id="css" />
 
   <!-- injector:theme -->
   <link rel="stylesheet" href="css/libs/oj/v10.1.0/redwood/oj-redwood-min.css" id="css" />
@@ -40,44 +41,66 @@
 </head>
 
 <body>
+  <oj-messages messages="[[messagesDataprovider]]" position="{}" display="general" display-options.category="none"></oj-messages>
 
-  <oj-input-text value="{{pincode}}" on-value-changed="[[stopInterval]]"></oj-input-text>
-  <oj-button on-oj-action="[[getVaccineDetails]]">Get Details</oj-button>
-
-  <oj-bind-if test="[[isBusy()]]">
-    <oj-progress-circle size='md' value='-1'></oj-progress-circle>
-  </oj-bind-if>
-
-  <oj-bind-if test="[[!isBusy()]]">
-    <div class="oj-flex oj-sm-flex-direction-column">
-      <oj-bind-for-each data="{{centersADP}}">
-        <template>
-          <oj-table style="margin-bottom:2em;" class="oj-flex-item" data="[[new adp($current.data.sessions)]]" columns="[[$current.data.columns]]">
-            <template slot="addressRenderer" data-oj-as="cell">
-              <div>
-                <p style="font-weight:bold;">
-                  <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
-                </p>
-                <p>
-                  <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>
-                </p>
-              </div>
-            </template>
-            <template slot="valRenderer" data-oj-as="cell">
-              <div>
-                <p :style="[[{fontWeight:'bold',color:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'1em'}]]">
-                  <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
-                </p>
-                <p>
-                  <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
-                </p>
-              </div>
-            </template>
-          </oj-table>
-        </template>
-      </oj-bind-for-each>
+  <div class="oj-flex oj-sm-flex-direction-column">
+    <div class="oj-flex-item">
+      <div class="oj-flex oj-sm-6 oj-sm-justify-content-space-between">
+        <oj-input-text class="oj-sm-8" value="{{pincode}}" on-value-changed="[[stopInterval]]" disabled="{{isBusy}}"></oj-input-text>
+        <oj-button class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get Details
+          <oj-bind-if test="[[isBusy()]]">
+            <oj-progress-circle slot="startIcon" size='sm' value='-1'></oj-progress-circle>
+          </oj-bind-if>
+        </oj-button>
+      </div>
     </div>
-  </oj-bind-if>
+    <oj-bind-if test="[[!isBusy()]]">
+      <oj-bind-if test="{{centers().length>0}}">
+        <div class="oj-flex-item">
+          <oj-button disabled="{{prevDsbld}}" on-oj-action="[[getPrevWeekData]]">
+            <oj-bind-text value="[[prevDsbld() ? 'Current Week' : 'Previous Week']]"></oj-bind-text>
+          </oj-button>
+          <oj-button on-oj-action="[[getNextWeekData]]">Next week</oj-button>
+        </div>
+      </oj-bind-if>
+      <div class="oj-flex-item">
+        <div class="oj-flex oj-sm-flex-direction-column">
+          <oj-bind-for-each data="{{centersADP}}">
+            <template>
+              <oj-table style="width:100%;margin-bottom:1em;max-height: 10em;" class="oj-flex-item" data="[[new adp($current.data.sessions)]]"
+                columns="[[$current.data.columns]]">
+                <template slot="addressRenderer" data-oj-as="cell">
+                  <div>
+                    <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
+                      <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
+
+                      <!-- <span style="padding:2px 0 0 0 !important;">
+                              <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>
+                            </span> -->
+                    </p>
+                  </div>
+                </template>
+                <template slot="valRenderer" data-oj-as="cell">
+                  <div>
+                    <p :style="[[{fontWeight:'bold',color:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.2em',margin:'0'}]]">
+                      <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
+                    </p>
+                    <p style="font-size:0.7em;margin:0;">
+                      <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
+                    </p>
+                  </div>
+                </template>
+              </oj-table>
+            </template>
+          </oj-bind-for-each>
+        </div>
+      </div>
+    </oj-bind-if>
+  </div>
+
+
+
+
 
 
   <script type="text/javascript">
