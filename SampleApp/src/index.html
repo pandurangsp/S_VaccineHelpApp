@@ -42,67 +42,103 @@
 
 <body>
   <oj-messages messages="[[messagesDataprovider]]" position="{}" display="general" display-options.category="none"></oj-messages>
-
-  <div style="padding:2em;" class="oj-flex oj-sm-flex-direction-column oj-sm-align-items-center oj-sm-justify-content-center oj-sm-flex-items-initial">
-    <div class="oj-flex-item oj-sm-12 oj-sm-justify-content-center">
-      <div class="oj-flex oj-sm-justify-content-center">
-        <oj-input-text class="oj-sm-6" value="{{pincode}}" on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
-        <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get
-          Details
-        </oj-button>
-      </div>
-    </div>
-    <oj-bind-if test="[[isBusy()]]">
-      <oj-progress-circle class="oj-flex-item" size='lg' value='-1' style="margin-top:5em;"></oj-progress-circle>
-    </oj-bind-if>
-    <oj-bind-if test="[[!isBusy()]]">
-      <oj-bind-if test="{{centers().length>0}}">
-        <div class="oj-flex-item" style="margin:1em 0;">
-          <oj-button disabled="{{prevDsbld}}" on-oj-action="[[getPrevWeekData]]">
-            <oj-bind-text value="[[prevDsbld() ? 'Current Week' : 'Previous Week']]"></oj-bind-text>
+  <oj-tab-bar on-selection-changed="[[onTabChange]]" style="margin:0 0 3em 40em;" class="oj-flex-item" selection="{{selectedView}}"
+    edge="top" display="all" data="[[viewsADP]]">
+    <template slot="itemTemplate" data-oj-as="item">
+      <li :class="[[{'oj-disabled' : item.data.disabled === 'true'}]]">
+        <a href="#">
+          <span class="oj-ux-ico-location-pin-s"></span>
+          <oj-bind-text value="[[item.data.name]]"> </oj-bind-text>
+        </a>
+      </li>
+    </template>
+  </oj-tab-bar>
+  <oj-switcher value="{{selectedView}}">
+    <div slot="p" style="padding:2em;" class="oj-flex oj-sm-flex-direction-column oj-sm-align-items-center oj-sm-justify-content-center oj-sm-flex-items-initial">
+      <div class="oj-flex-item oj-sm-12 oj-sm-justify-content-center">
+        <div class="oj-flex oj-sm-justify-content-center">
+          <oj-input-text class="oj-sm-6" value="{{pincode}}" on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
+          <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get
+            Details
           </oj-button>
-          <oj-button on-oj-action="[[getNextWeekData]]">Next week</oj-button>
         </div>
+      </div>
+      <oj-bind-if test="[[isBusy()]]">
+        <oj-progress-circle class="oj-flex-item" size='lg' value='-1' style="margin-top:5em;"></oj-progress-circle>
       </oj-bind-if>
-      <div class="oj-flex-item oj-sm-10">
-        <div class="oj-flex oj-sm-flex-direction-column">
-          <oj-bind-for-each data="{{centersADP}}">
-            <template>
-              <oj-table style="width:100%;margin-bottom:1em;max-height: 10em;" data="[[new adp($current.data.sessions)]]"
-                columns="[[$current.data.columns]]">
-                <template slot="addressRenderer" data-oj-as="cell">
-                  <div>
-                    <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
-                      <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
-                        <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
-                      </p>
-                      <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
+      <oj-bind-if test="[[!isBusy()]]">
+        <oj-bind-if test="{{centers().length>0}}">
+          <div class="oj-flex-item" style="margin:1em 0;">
+            <oj-button disabled="{{prevDsbld}}" on-oj-action="[[getPrevWeekData]]">
+              <oj-bind-text value="[[prevDsbld() ? 'Current Week' : 'Previous Week']]"></oj-bind-text>
+            </oj-button>
+            <oj-button on-oj-action="[[getNextWeekData]]">Next week</oj-button>
+          </div>
+        </oj-bind-if>
+        <div class="oj-flex-item oj-sm-10">
+          <div class="oj-flex oj-sm-flex-direction-column">
+            <oj-bind-for-each data="{{centersADP}}">
+              <template>
+                <oj-table style="width:100%;margin-bottom:1em;max-height: 10em;" data="[[new adp($current.data.sessions)]]"
+                  columns="[[$current.data.columns]]">
+                  <template slot="addressRenderer" data-oj-as="cell">
+                    <div>
+                      <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
+                        <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
+                          <oj-bind-text value="[[cell.data.split('-')[0]=='0' ? NA : cell.data.split('-')[0]]]"></oj-bind-text>
+                        </p>
+                        <p style="font-weight:bold;padding:0 !important;font-size:0.8em;">
                           <oj-bind-text value="[[cell.data.split('-')[1]]]"></oj-bind-text>
                         </p>
-                    </oj-bind-if>
-                  </div>
-                </template>
-                <template slot="valRenderer" data-oj-as="cell">
-                  <div>
-                    <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
-                      <p>
-                        <span :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.25em 1em',marginLeft:'1em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
-                        </span>
-                      </p>
-                      <p style="font-size:0.7em;margin:0;">
-                        <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
-                      </p>
-                    </oj-bind-if>
-                  </div>
-                </template>
-              </oj-table>
-            </template>
-          </oj-bind-for-each>
+                      </oj-bind-if>
+                    </div>
+                  </template>
+                  <template slot="valRenderer" data-oj-as="cell">
+                    <div>
+                      <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
+                        <p>
+                          <span :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]=='0' ? 'red':'green',padding:'0.25em 1em',marginLeft:'1em'}]]">
+                            <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
+                          </span>
+                        </p>
+                        <p style="font-size:0.7em;margin:0;">
+                          <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
+                        </p>
+                      </oj-bind-if>
+                    </div>
+                  </template>
+                </oj-table>
+              </template>
+            </oj-bind-for-each>
+          </div>
         </div>
+      </oj-bind-if>
+    </div>
+    <div slot="d" class="oj-sm-10" style="margin:auto;">
+      <div class="oj-flex oj-sm-flex-direction-column oj-sm-justify-content-center oj-sm-align-items-center oj-sm-flex-items-initial oj-sm-10"
+        style="padding:3em;margin: auto;">
+        <oj-toolbar class="oj-flex-item oj-sm-12">
+          <oj-select-single style="max-width:21em;width:21em;" data="[[statesADP]]" value="{{state}}" on-value-changed="[[onStateChange]]"
+            label-hint="State" label-edge="inside" disabled="{{isStateDsbld}}">
+          </oj-select-single>
+          <oj-select-single style="max-width:21em;width:21em;" data="[[availbltyADP]]" value="{{availbltyVal}}" on-value-changed="[[onAvlbltyChange]]"
+            label-hint="Availability" label-edge="inside" disabled="{{isAvlDsbld}}">
+          </oj-select-single>
+        </oj-toolbar>
+        <oj-bind-if test="[[(dstSessionProgress()>0) && (dstSessionProgress()<100)]]">
+          <oj-progress-bar class="oj-flex-item" style="margin-top:5em;width:25em;" value="{{dstSessionProgress}}"></oj-progress-bar>
+          <span>
+            <oj-bind-text value="{{dstSessionProgress()+'%'}}"></oj-bind-text>
+          </span>
+        </oj-bind-if>
+        <oj-bind-if test="[[dstSessionProgress()==100]]">
+          <oj-table class="oj-flex-item" columns="{{districtTblCols}}" data="{{dstSessionsADP}}"></oj-table>
+        </oj-bind-if>
       </div>
-    </oj-bind-if>
-  </div>
+    </div>
+  </oj-switcher>
+
+
 
 
 

@@ -56,7 +56,8 @@
 }());
 
 require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider', 'ojs/ojmessages',
-  'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle'],
+  'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle',
+  'ojs/ojnavigationlist', 'ojs/ojswitcher', 'ojs/ojselectsingle', 'ojs/ojtoolbar', 'ojs/ojprogress-bar'],
   function (Bootstrap, Context, ko, ArrayDataProvider) {
     Bootstrap.whenDocumentReady().then(
       function () {
@@ -71,6 +72,53 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.prevDsbld = ko.observable(true);
               this.messages = ko.observableArray([]);
               this.messagesDataprovider = new ArrayDataProvider(this.messages);
+              this.selectedView = ko.observable("d");
+              this.views = [{ name: "Pincode", id: "p" }, { name: "Districts", id: "d" }];
+              this.viewsADP = new ArrayDataProvider(this.views, { keyAttributes: 'id' });
+              this.districtTblCols = ko.observableArray([]);
+              this.districtCount = ko.observable(0);
+              this.dstSessions = ko.observableArray([]);
+              this.dstSessionsADP = new ArrayDataProvider(this.dstSessions, { keyAttributes: "session_id" });
+              this.procssdDistrcts = ko.observable(0);
+              this.dstSessionProgress = ko.observable(0);
+
+              this.states = ko.observableArray([]);
+              this.statesADP = new ArrayDataProvider(this.states, { keyAttributes: 'value' })
+              this.state = ko.observable("");
+              this.isStateDsbld = ko.observable(false);
+
+              this.availblty = ko.observableArray([{ "label": "All", value: "all" }, { "label": "Available", "value": "avl" }]);
+              this.availbltyADP = new ArrayDataProvider(this.availblty, { keyAttributes: 'value' })
+              this.availbltyVal = ko.observable("");
+              this.isAvlDsbld = ko.observable(true)
+
+              this.districts = ko.observableArray([]);
+              this.districtsADP = new ArrayDataProvider(this.districts, { keyAttributes: 'value' })
+              this.district = ko.observable();
+
+              ko.computed(() => {
+                console.log("DISTRICT COUNT ", this.districtCount());
+                if (this.districtCount() > 0) {
+                  let progress = (this.procssdDistrcts() / this.districtCount()) * 100;
+                  this.dstSessionProgress(Math.round(progress));
+
+                  console.log("Progress ", this.dstSessionProgress());
+
+                  if ((this.dstSessionProgress() == 100) && (this.dstSessions().length > 0)) {
+                    let session = this.dstSessions()[0];
+                    let cols = Object.keys(session).map(ssn => {
+                      return { "headerText": ssn, "field": ssn }
+                    });
+                    this.districtTblCols(cols);
+                    this.isStateDsbld(false);
+                    this.isAvlDsbld(false);
+                  }
+                }
+                else {
+                  this.dstSessionProgress(0);
+                }
+
+              });
 
               this.sessionTblCol = [{
                 "headerText": "Available Capacity",
@@ -90,16 +138,152 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.stopInterval();
               }
 
+
+
+              this.getStates = async () => {
+                try {
+                  await fetch(`https://cdn-api.co-vin.in/api/v2/admin/location/states`)
+                    .then(response => {
+                      if (!response.ok) {
+                        throw "error"
+                      }
+                      else {
+                        return response.json()
+                      }
+                    })
+                    .then(data => {
+                      let allStates = data.states.map(state => {
+                        return { 'value': state.state_id, 'label': state.state_name }
+                      });
+                      this.states(allStates);
+                    })
+                }
+                catch (e) {
+                  this.messages([]);
+                  let errObj = {
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Could not get states",
+                    timestamp: new Date().toLocaleString()
+                  }
+                  this.messages.push(errObj);
+                }
+              }
+
+              this.getStates();
+
+              this.getDistricts = async (state) => {
+                console.log("STATE IS ", state);
+                if (state) {
+                  try {
+                    await fetch("https://cdn-api.co-vin.in/api/v2/admin/location/districts/" + state)
+                      .then(response => {
+                        if (!response.ok) {
+                          throw "error"
+                        }
+                        else {
+                          return response.json()
+                        }
+                      })
+                      .then(data => {
+                        let allDistricts = data.districts.map(district => {
+                          return { 'value': district.district_id, 'label': district.district_name }
+                        });
+                        this.districts(allDistricts);
+                        this.districtCount(allDistricts.length);
+                      })
+                  }
+                  catch (e) {
+                    this.messages([]);
+                    let errObj = {
+                      severity: "error",
+                      summary: "Error",
+                      detail: "Could not get districts",
+                      timestamp: new Date().toLocaleString()
+                    }
+                    this.messages.push(errObj);
+                  }
+                }
+              }
+
+              this.getDitrictInterval = null
+
+              this.onTabChange = (evt) => {
+                if (evt.detail.value == 'd') {
+                  this.state("");
+                }
+                else {
+                  clearInterval(this.getDitrictInterval);
+                }
+              }
+
+              this.onStateChange = async (evt) => {
+                if (evt.detail.value) {
+                  this.availbltyVal('');
+                  this.isStateDsbld(true);
+                  this.isAvlDsbld(true);
+                  this.dstSessions([]);
+                  this.districtCount(0);
+                  this.dstSessionProgress(0);
+
+                  await this.getDistricts(evt.detail.value);
+                  console.log("DISTRICTS ARE ", this.districts());
+                  if (this.districts().length > 0) {
+                    this.dw = new Worker('./js/worker/getVaccinesByState.js');
+                    this.dw.postMessage(this.districts());
+
+                    this.dw.onmessage = (event) => {
+                      if (event.data.status == "error") {
+                        this.messages([]);
+                        let errObj = {
+                          severity: "error",
+                          summary: "Error",
+                          detail: evt.data,
+                          timestamp: new Date().toLocaleString()
+                        }
+                        this.messages.push(errObj);
+                      }
+                      else {
+                        this.dstSessions(event.data.sessions.data);
+                        this.backupSessions(event.data.sessions.data);
+                        console.log("SESSIONS ", this.dstSessions());
+                        this.procssdDistrcts(event.data.districts);
+                      }
+                    }
+                  }
+                }
+              }
+
+              this.backupSessions = ko.observableArray([]);
+
+
+              this.onAvlbltyChange = (evt) => {
+                console.log("AVAILABILITY ", evt.detail.value);
+                this.isAvlDsbld(true);
+                this.isStateDsbld(true);
+                if (evt.detail.value == 'avl') {
+                  let sessions = this.dstSessions().filter(sessn => sessn.available > 0)
+                  this.dstSessions(sessions);
+                  this.isAvlDsbld(false);
+                  this.isStateDsbld(false);
+                }
+                else if (evt.detail.value == 'all'){
+                  this.dstSessions(this.backupSessions());
+                  this.isAvlDsbld(false);
+                  this.isStateDsbld(false);
+                }
+              }
+
               this.populateWeeksDates = (frmDt) => {
                 this.weeksDatesColumns = [];
                 let date = new Date(frmDt);
-                this.weeksDatesColumns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled","style": "white-space:normal;word-wrap:break-word; text-align: center;vertical-align: middle;width:10%;" })
+                this.weeksDatesColumns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled", "style": "white-space:normal;word-wrap:break-word; text-align: center;vertical-align: middle;width:10%;" })
                 let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
-                this.weeksDatesColumns.push({headerText:dt.replace(/\//ig, '-'),field:dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled"});
+                this.weeksDatesColumns.push({ headerText: dt.replace(/\//ig, '-'), field: dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
                 for (let i = 0; i <= 5; i++) {
                   date.setDate(date.getDate() + 1);
                   let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
-                  this.weeksDatesColumns.push({headerText:dt.replace(/\//ig, '-'),field:dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled"});
+                  this.weeksDatesColumns.push({ headerText: dt.replace(/\//ig, '-'), field: dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
                 }
               }
 
@@ -152,10 +336,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
                           center.columns = this.weeksDatesColumns;
                           center.sessions = [sessions];
-                          
+
                           return center;
                         })
-                        console.log("CENTERS ARE ",centers);
+                        console.log("CENTERS ARE ", centers);
                         if (centers.length > 0) {
                           this.centers(centers);
                         }
@@ -192,7 +376,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
               this.getNextWeekData = () => {
                 console.log("GETTING NEXT WEEEK DETAILS")
-                this.stopInterval();                
+                this.stopInterval();
                 this.frmDate.setDate(this.frmDate.getDate() + 7);
                 this.populateWeeksDates(this.frmDate);
                 this.prevDsbld(false);

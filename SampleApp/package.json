@@ -7,7 +7,8 @@
   },
   "devDependencies": {
     "@oracle/oraclejet-tooling": "~10.1.0",
-    "electron": "^12.0.7"
+    "electron": "^12.0.7",
+    "node-fetch": "^2.6.1"
   },
   "engines": {
     "node": ">=10.13.0"
