@@ -22,7 +22,6 @@ onmessage = (event) => {
                 getAllDistrictsData(index);
             }
             else{
-                console.log("POSTING ",districtsData);
                 postMessage(districtsData)
             }
         })

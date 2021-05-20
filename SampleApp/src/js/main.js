@@ -260,6 +260,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                       else {
                         let sessionsWrkr = new Worker('./js/worker/getVaccinesByDistrict.js');
                         sessionsWrkr.postMessage(event.data);
+
+                        sessionsWrkr.onmessage=(evt)=>{
+                          console.log("SESSIONS RECVD are ",evt.data)
+                        }
                       }
                     }
                   }

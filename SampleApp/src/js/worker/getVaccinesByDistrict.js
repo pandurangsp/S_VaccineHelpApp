@@ -1,11 +1,9 @@
 onmessage = (event) => {
     let districts = event.data;
     console.log("DISTRICTS RECVD. ", districts);
-
+    let currentDistrict="";
 
     getDoseAvlblty = (date, sessions) => {
-        console.log(date);
-        console.log(sessions);
         return new Promise(resolve => {
             let vals = sessions.filter(session => {
                 if (session.date == date) {
@@ -14,7 +12,6 @@ onmessage = (event) => {
             })
 
             if (vals.length > 0) {
-                console.log("VALS ARE ",vals);
                 if (vals.length == 1) {
                     vals[0][vals[0].vaccine] = vals[0].available_capacity;
                     if (!vals[0]['vaccineDtl']) {
@@ -27,8 +24,6 @@ onmessage = (event) => {
                 }
                 else{
                     let val = vals.reduce((acc, curr) => {
-                        console.log("ACC ",acc)
-                        console.log("CURR ",curr)
 
                         if (!acc['vaccineDtl']) {
                             acc['vaccineDtl'] = {};                                
@@ -52,15 +47,13 @@ onmessage = (event) => {
                         vacc.avlbl+=curr.available_capacity;
                         acc['vaccineDtl']['vaccines'][ageIndex]['avlbl']=vacc.avlbl;
 
-                        console.log("RETURNING ACC ",acc);
                         return acc
                     });
-                    let { date, vaccineDtl } = val
-                    setTimeout(()=>resolve({ date, vaccineDtl }),300);
+                    setTimeout(()=>resolve({ "district":currentDistrict,"date":val.date, "vaccineDtl":val.vaccineDtl,"sessions":[...vals] }),300);
                 }
             }
             else{
-                setTimeout(()=>resolve({ date, 'vaccineDtl':{} }),300);
+                setTimeout(()=>resolve({ "district":currentDistrict,"date":val.date, "vaccineDtl":{},"sessions":[] }),300);
             }
         })
     }
@@ -74,7 +67,7 @@ onmessage = (event) => {
 
         if (weekBgnDt.getDay() > 0) {
             diffDays = 0 - weekBgnDt.getDay();
-            weekBgnDt.setDate(weekBgnDt.getDate() + diffDays)
+            //weekBgnDt.setDate(weekBgnDt.getDate() + diffDays)
         }
         weekEndDt = weekEndDt.setDate(weekBgnDt.getDate() + 6)
 
@@ -102,13 +95,13 @@ onmessage = (event) => {
         if(!dates){
             dates=getCurrentWeekDates().dateCols;
         }
+        currentDistrict=districts[distrctIndx].district.label;
         districts[distrctIndx].centers.map(center => {
             sessions = [...sessions, ...center.sessions]
         });
-        console.log("SESSIONS ARE ",sessions);
 
         getDoseAvlblty(dates[dateIndx],sessions).then(data=>{
-            console.log("SESSIONS Data ",data);
+            postMessage(data);
             districtSessions.push({"district":districts[distrctIndx].value})
             if(dateIndx<dates.length-1){
                 dateIndx+=1;
@@ -119,9 +112,6 @@ onmessage = (event) => {
                     dateIndx=0;
                     distrctIndx+=1;
                     getDosesData(dateIndx,distrctIndx);
-                }
-                else{
-                    postMessage()
                 }
             }
         })
