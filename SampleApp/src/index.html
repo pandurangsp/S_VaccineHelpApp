@@ -121,8 +121,8 @@
           <oj-select-single style="max-width:21em;width:21em;" data="[[statesADP]]" value="{{state}}" on-value-changed="[[onStateChange]]"
             label-hint="State" label-edge="inside" disabled="{{isStateDsbld}}">
           </oj-select-single>
-          <oj-select-single style="max-width:21em;width:21em;" data="[[availbltyADP]]" value="{{availbltyVal}}" on-value-changed="[[onAvlbltyChange]]"
-            label-hint="Availability" label-edge="inside" disabled="{{isAvlDsbld}}">
+          <oj-select-single style="max-width:21em;width:21em;" data="[[availbltyADP]]" value="{{availbltyVal}}"
+            on-value-changed="[[onAvlbltyChange]]" label-hint="Availability" label-edge="inside" disabled="{{isAvlDsbld}}">
           </oj-select-single>
         </oj-toolbar>
         <oj-bind-if test="[[(dstSessionProgress()>0) && (dstSessionProgress()<100)]]">
@@ -131,19 +131,24 @@
             <oj-bind-text value="{{dstSessionProgress()+'%'}}"></oj-bind-text>
           </span>
         </oj-bind-if>
-        <oj-bind-if test="[[dstSessionProgress()==100]]">
-          <oj-table class="oj-flex-item" columns="{{districtTblCols}}" data="{{dstSessionsADP}}"></oj-table>
+
+        <oj-bind-if test="[[dstSessions().length>0]]">
+          <oj-table style="width:80%" class="oj-flex-item" columns="{{districtTblCols}}" data="{{dstSessionsPDP}}">
+            <template slot="avlbltySlot" data-oj-as="item">
+              <oj-bind-if test="[[item.data.vaccineDtl]]">
+                <oj-bind-text value="[[JSON.stringify(item.data.vaccineDtl)]]"></oj-bind-text>
+              </oj-bind-if>
+              <oj-bind-if test="[[!item.data.vaccineDtl]]">
+                <div>NA</div>
+              </oj-bind-if>
+            </template>
+            <oj-paging-control id="paging" data="[[dstSessionsPDP]]" page-size="10" slot="bottom">
+            </oj-paging-control>
+          </oj-table>
         </oj-bind-if>
       </div>
     </div>
   </oj-switcher>
-
-
-
-
-
-
-
 
   <script type="text/javascript">
     // The "oj_whenReady" global variable enables a strategy that the busy context whenReady,

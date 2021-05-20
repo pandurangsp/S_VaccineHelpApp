@@ -55,10 +55,11 @@
   );
 }());
 
-require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider', 'ojs/ojmessages',
-  'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle',
-  'ojs/ojnavigationlist', 'ojs/ojswitcher', 'ojs/ojselectsingle', 'ojs/ojtoolbar', 'ojs/ojprogress-bar'],
-  function (Bootstrap, Context, ko, ArrayDataProvider) {
+require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider', 'ojs/ojpagingdataproviderview', 'ojs/ojpagingcontrol',
+  'ojs/ojmessages', 'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle',
+  'ojs/ojnavigationlist', 'ojs/ojswitcher', 'ojs/ojselectsingle', 'ojs/ojtoolbar', 'ojs/ojprogress-bar'
+],
+  function (Bootstrap, Context, ko, ArrayDataProvider, PagingDataProviderView) {
     Bootstrap.whenDocumentReady().then(
       function () {
         function init() {
@@ -73,12 +74,13 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.messages = ko.observableArray([]);
               this.messagesDataprovider = new ArrayDataProvider(this.messages);
               this.selectedView = ko.observable("d");
-              this.views = [{ name: "Pincode", id: "p" }, { name: "Districts", id: "d" }];
+              this.views = [{ name: "Districts", id: "d" }, { name: "Pincode", id: "p" }];
               this.viewsADP = new ArrayDataProvider(this.views, { keyAttributes: 'id' });
               this.districtTblCols = ko.observableArray([]);
               this.districtCount = ko.observable(0);
               this.dstSessions = ko.observableArray([]);
-              this.dstSessionsADP = new ArrayDataProvider(this.dstSessions, { keyAttributes: "session_id" });
+              this.dstSessionsADP = new ArrayDataProvider(this.dstSessions);
+              this.dstSessionsPDP = ko.observable();
               this.procssdDistrcts = ko.observable(0);
               this.dstSessionProgress = ko.observable(0);
 
@@ -87,7 +89,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.state = ko.observable("");
               this.isStateDsbld = ko.observable(false);
 
-              this.availblty = ko.observableArray([{ "label": "All", value: "all" }, { "label": "Available", "value": "avl" }]);
+              this.availblty = ko.observableArray([{ "label": "All", value: "all" }, { "label": "Available", "value": "avl" }, { "label": "Not Available", "value": "na" }]);
               this.availbltyADP = new ArrayDataProvider(this.availblty, { keyAttributes: 'value' })
               this.availbltyVal = ko.observable("");
               this.isAvlDsbld = ko.observable(true)
@@ -96,7 +98,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.districtsADP = new ArrayDataProvider(this.districts, { keyAttributes: 'value' })
               this.district = ko.observable();
 
-              ko.computed(() => {
+              this.isTblBusy = ko.observable(false);
+
+
+              this.refreshTbl = async () => {
                 console.log("DISTRICT COUNT ", this.districtCount());
                 if (this.districtCount() > 0) {
                   let progress = (this.procssdDistrcts() / this.districtCount()) * 100;
@@ -106,19 +111,29 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
                   if ((this.dstSessionProgress() == 100) && (this.dstSessions().length > 0)) {
                     let session = this.dstSessions()[0];
+                    console.log("SESSION OBJ ", session);
                     let cols = Object.keys(session).map(ssn => {
-                      return { "headerText": ssn, "field": ssn }
+                      if(ssn!=="details"){
+                        if(ssn!=="district"){
+                          return { "headerText": ssn, "field": ssn,"template":"avlbltySlot"}
+                        }
+                        else{
+                          return { "headerText": ssn, "field": ssn }
+                        }
+                      }                      
                     });
+                    console.log("COLS ARE ",cols);
                     this.districtTblCols(cols);
                     this.isStateDsbld(false);
                     this.isAvlDsbld(false);
+                    this.isTblBusy(false)
+                    this.dstSessionsPDP(new PagingDataProviderView(new ArrayDataProvider(this.dstSessions)));
                   }
                 }
                 else {
                   this.dstSessionProgress(0);
                 }
-
-              });
+              };
 
               this.sessionTblCol = [{
                 "headerText": "Available Capacity",
@@ -137,8 +152,6 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.prevDsbld(true);
                 this.stopInterval();
               }
-
-
 
               this.getStates = async () => {
                 try {
@@ -218,6 +231,8 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               }
 
               this.onStateChange = async (evt) => {
+                this.isTblBusy(true);
+
                 if (evt.detail.value) {
                   this.availbltyVal('');
                   this.isStateDsbld(true);
@@ -231,8 +246,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                   if (this.districts().length > 0) {
                     this.dw = new Worker('./js/worker/getVaccinesByState.js');
                     this.dw.postMessage(this.districts());
-
-                    this.dw.onmessage = (event) => {
+                    this.dw.onmessage = async (event) => {
                       if (event.data.status == "error") {
                         this.messages([]);
                         let errObj = {
@@ -244,10 +258,8 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                         this.messages.push(errObj);
                       }
                       else {
-                        this.dstSessions(event.data.sessions.data);
-                        this.backupSessions(event.data.sessions.data);
-                        console.log("SESSIONS ", this.dstSessions());
-                        this.procssdDistrcts(event.data.districts);
+                        let sessionsWrkr = new Worker('./js/worker/getVaccinesByDistrict.js');
+                        sessionsWrkr.postMessage(event.data);
                       }
                     }
                   }
@@ -256,8 +268,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
               this.backupSessions = ko.observableArray([]);
 
-
               this.onAvlbltyChange = (evt) => {
+                this.isTblBusy(true);
+
+                this.dstSessions(this.backupSessions());
                 console.log("AVAILABILITY ", evt.detail.value);
                 this.isAvlDsbld(true);
                 this.isStateDsbld(true);
@@ -267,11 +281,19 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                   this.isAvlDsbld(false);
                   this.isStateDsbld(false);
                 }
-                else if (evt.detail.value == 'all'){
+                else if (evt.detail.value == 'na') {
+                  let sessions = this.dstSessions().filter(sessn => sessn.available == 0)
+                  this.dstSessions(sessions);
+                  this.isAvlDsbld(false);
+                  this.isStateDsbld(false);
+                }
+                else if (evt.detail.value == 'all') {
                   this.dstSessions(this.backupSessions());
                   this.isAvlDsbld(false);
                   this.isStateDsbld(false);
                 }
+                this.dstSessionsPDP(new PagingDataProviderView(new ArrayDataProvider(this.dstSessions)));
+                this.isTblBusy(false);
               }
 
               this.populateWeeksDates = (frmDt) => {
@@ -397,6 +419,26 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               }
 
               this.populateWeeksDates(this.frmDate);
+
+              this.formatVaccineDetails = async (vaccineDtl) => {
+                let vaccines = Object.keys(vaccineDtl);
+                let rows = [];
+                await new Promise((resolve) => {
+                  vaccines.map(vaccine => {
+                    let ages = Object.keys(vaccineDtl[vaccine]);
+                    ages.map(age=>{
+                      let obj = {};
+                      obj["name"] = vaccine;
+                      obj["age"] = age;
+                      obj["avlbl"] = vaccineDtl[vaccine][age];
+                      console.log("ADDING ROW ",obj);
+                      rows.push(obj);
+                    })
+                  })
+                  resolve(rows)
+                });
+                return new ArrayDataProvider(rows);
+              }
 
             }
           }

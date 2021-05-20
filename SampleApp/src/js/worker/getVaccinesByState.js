@@ -1,40 +1,32 @@
-onmessage = async (event) => {
-    console.log("EVENT ", event);
-    try {
-        if (Array.isArray(event.data)) {
-            let sessions = [];
-            let itr = getSessions(event.data);
-            let distCount=0;
-            for (let i = 0; i < event.data.length; i++) {
-                itr.next().then(data => {
-                    distCount+=1;
-                    data.value.centers.map(center => {
-                        sessions=[...sessions,...center.sessions.map(session=>{
-                            return {"district":currentDistrict,"available":session.available_capacity,"date":session.date,"dose1":session.available_capacity_dose1,"dose2":session.available_capacity_dose2,"age":session.min_age_limit}
-                        })]
-                    });
-                    postMessage({"districts":distCount,"sessions":{"district":currentDistrict,"data":sessions},"status":"ok"});
-                })
+onmessage = (event) => {
+    //define the array
+    let districts = event.data;
+    let currentDistrict="";
+    let districtsData=[];
+
+    let getDistrictData = (district) => {
+        currentDistrict=district;
+        return new Promise(async (resolve) => {
+            let todayDate = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(new Date())).replace(/\//ig, '-');
+            await fetch(`https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=${district.value}&date=${todayDate}`).then(response => {
+                setTimeout(() => resolve(response.json()), 500)
+            })
+        })
+    }
+
+    let getAllDistrictsData = (index) => {
+        getDistrictData(districts[index]).then((response) => {
+            districtsData.push({'district':currentDistrict,centers:response.centers});
+            if (index < districts.length - 1) {
+                index += 1;
+                getAllDistrictsData(index);
             }
-        }
-        else {
-            postMessage("error-Districts not received correctly");
-        }
+            else{
+                console.log("POSTING ",districtsData);
+                postMessage(districtsData)
+            }
+        })
     }
-    catch (e) {
-        postMessage({"status":"error"});
-    }
-}
 
-var sessions = [];
-var currentDistrict="";
-
-async function* getSessions(districts) {
-    for (let district of districts) {
-        console.log("DISTRICT IS ", district);
-        currentDistrict=district.label;
-        let response = await fetch(`https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=${district.value}&date=15-05-2021`);
-        await new Promise(r => setTimeout(r, 300));
-        yield await response.json();
-    }
+    getAllDistrictsData(0)
 }
