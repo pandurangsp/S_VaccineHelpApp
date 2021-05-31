@@ -1,9 +1,16 @@
 onmessage = (event) => {
     let districts = event.data;
+
+    let districtRows = [];
+
     console.log("DISTRICTS RECVD. ", districts);
-    let currentDistrict="";
+    let currentDistrict = "";
+    let currentDate = "";
+    let vaccinesArr = [];
+    let dstProcessedCount = 0;
 
     getDoseAvlblty = (date, sessions) => {
+        currentDate = date;
         return new Promise(resolve => {
             let vals = sessions.filter(session => {
                 if (session.date == date) {
@@ -13,47 +20,47 @@ onmessage = (event) => {
 
             if (vals.length > 0) {
                 if (vals.length == 1) {
-                    vals[0][vals[0].vaccine] = vals[0].available_capacity;
-                    if (!vals[0]['vaccineDtl']) {
-                        vals[0]['vaccineDtl'] = {};
-                        vals[0]['vaccineDtl'][vals[0].vaccine] = {};
-                    }
-                    vals[0]['vaccineDtl'][vals[0].vaccine][vals[0].min_age_limit] = vals[0].available_capacity;
-                    let { date, vaccineDtl } = vals[0];
-                    setTimeout(()=>resolve({ date, vaccineDtl }),300);
+                    let obj = {};
+                    obj["name"] = vals[0].vaccine
+                    obj["avlbl"] = vals[0].available_capacity;
+                    obj["date"] = vals[0].date;
+                    obj["district"] = currentDistrict;
+                    obj["age"] = vals[0].min_age_limit;
+                    obj["sessions"] = [...vals];
+                    
+                    setTimeout(() => resolve([obj]), 300);
                 }
-                else{
-                    let val = vals.reduce((acc, curr) => {
-
-                        if (!acc['vaccineDtl']) {
-                            acc['vaccineDtl'] = {};                                
+                else {
+                    for (session of vals) {
+                        let vaccIndex = vaccinesArr.findIndex(vacc => {
+                            return (vacc.age == session.min_age_limit) && (vacc.name == session.vaccine) && (vacc.date == session.date) && (vacc.district == currentDistrict)
+                        })
+                        if (vaccIndex == -1) {
+                            let obj = {};
+                            obj["name"] = session.vaccine
+                            obj["avlbl"] = session.available_capacity;
+                            obj["date"] = session.date;
+                            obj["district"] = currentDistrict;
+                            obj["age"] = session.min_age_limit;
+                            obj["sessions"] = [...vals];
+                            vaccinesArr.push(obj);
                         }
-
-                        if (!acc['vaccineDtl']['vaccines']) {
-                            acc['vaccineDtl']['vaccines'] = [];                                
+                        else {
+                            let vacc = vaccinesArr[vaccIndex];
+                            vacc.avlbl += session.available_capacity;
+                            vaccinesArr.splice(vaccIndex, 1, vacc);
                         }
-
-                        let ageIndex=acc['vaccineDtl']['vaccines'].findIndex(vacc=>vacc.age==curr.min_age_limit);
-                        if(ageIndex==-1){
-                            let obj={};
-                            obj["age"]=curr.min_age_limit;
-                            obj["avlbl"]=0;
-                            obj["name"]=curr.vaccine;
-                            acc['vaccineDtl']['vaccines'].push(obj);
-                            ageIndex=acc['vaccineDtl']['vaccines'].length-1;
-                        }
-
-                        let vacc=acc['vaccineDtl']['vaccines'][ageIndex];
-                        vacc.avlbl+=curr.available_capacity;
-                        acc['vaccineDtl']['vaccines'][ageIndex]['avlbl']=vacc.avlbl;
-
-                        return acc
-                    });
-                    setTimeout(()=>resolve({ "district":currentDistrict,"date":val.date, "vaccineDtl":val.vaccineDtl,"sessions":[...vals] }),300);
+                    }
+                    setTimeout(() => resolve(vaccinesArr), 300);
                 }
             }
-            else{
-                setTimeout(()=>resolve({ "district":currentDistrict,"date":val.date, "vaccineDtl":{},"sessions":[] }),300);
+            else {
+                let obj = {};
+                obj["name"] = null;
+                obj["district"] = currentDistrict;
+                obj["date"] = currentDate;
+                obj["sessions"] = [];
+                setTimeout(() => resolve([obj]), 300);
             }
         })
     }
@@ -86,35 +93,69 @@ onmessage = (event) => {
         return { wBeginDate, wBeginDateLng, wEndDate, wEndDateLng, dateCols };
     }
 
-    let dates=null;
-    let districtSessions=[];
-    let sessions=[];
+    let dates = null;
+    let districtSessions = [];
+    let sessions = [];
+    let isComplete = false;
 
-    getDosesData=(dateIndx,distrctIndx)=>{
-        
-        if(!dates){
-            dates=getCurrentWeekDates().dateCols;
+    getDosesData = (dateIndx, distrctIndx) => {
+        if (!dates) {
+            dates = getCurrentWeekDates().dateCols;
+            districtRows = districts.map(district => {
+                let obj = {};
+                obj["district"] = district.district.label;
+                dates.map(date => {
+                    obj[date] = "";
+                })
+                return obj;
+            })
+            console.log("districtRows ", districtRows);
         }
-        currentDistrict=districts[distrctIndx].district.label;
+        console.log("DISTRICT IS ",districts[distrctIndx]);
+        currentDistrict = districts[distrctIndx].district.label;
+        currentDistrictid = districts[distrctIndx].district.value;
+        console.log("currentDistrictid ",currentDistrictid);
         districts[distrctIndx].centers.map(center => {
             sessions = [...sessions, ...center.sessions]
         });
 
-        getDoseAvlblty(dates[dateIndx],sessions).then(data=>{
-            postMessage(data);
-            districtSessions.push({"district":districts[distrctIndx].value})
-            if(dateIndx<dates.length-1){
-                dateIndx+=1;
-                getDosesData(dateIndx,distrctIndx);
+        getDoseAvlblty(dates[dateIndx], sessions).then(data => {
+            console.log("DATA IS ", data)
+
+            for (let i = 0; i < districtRows.length; i++) {
+                if ((districtRows[i].district == currentDistrict)) {
+                    let rows = data.filter(dstrct => {
+                        if ((dstrct.district == currentDistrict) && (dstrct.date == currentDate)) {
+                            return dstrct
+                        }
+                    });
+                    console.log("ROWS ARE ", rows);
+
+                    districtRows[i][currentDate] = rows.map(row => row)
+                }
+                if ((districtRows[i].district == currentDistrict)) {
+                    districtRows[i]["id"] = currentDistrictid;
+                }
             }
-            else{
-                if(distrctIndx<districts.length-1){
-                    dateIndx=0;
-                    distrctIndx+=1;
-                    getDosesData(dateIndx,distrctIndx);
+
+            console.log("DISTRICTS ARE ", districtRows);
+            postMessage({ allDistricts: districtRows, isComplete, dstProcessedCount });
+            if (dateIndx < dates.length - 1) {
+                dateIndx += 1;
+                if ((distrctIndx == districts.length - 1) && (dateIndx == dates.length - 1)) {
+                    isComplete = true;
+                }
+                getDosesData(dateIndx, distrctIndx, isComplete);
+            }
+            else {
+                if (distrctIndx < districts.length - 1) {
+                    dateIndx = 0;
+                    distrctIndx += 1;
+                    dstProcessedCount += 1;
+                    getDosesData(dateIndx, distrctIndx, isComplete);
                 }
             }
         })
     }
-    getDosesData(0,0);
+    getDosesData(0, 0);
 }

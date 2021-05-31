@@ -28,6 +28,20 @@
       }
     },
 
+    "node-wav-player": {
+      "cwd": "node_modules/node-wav-player/lib",
+      "debug": {
+        "src": "wav-player.js",
+        "path": "libs/node-wav-player/wav-player.js",
+        "cdnPath": "node-wav-player/wav-player"
+      },
+      "release": {
+        "src": "wav-player.js",
+        "path": "libs/node-wav-player/wav-player.js",
+        "cdnPath": "node-wav-player/wav-player"
+      }
+    },
+
     "jquery": {
       "cdn": "3rdparty",
       "cwd": "node_modules/jquery/dist",

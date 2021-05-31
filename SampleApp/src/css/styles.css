@@ -20,3 +20,24 @@
     box-shadow: 0 0 3px #000;
     text-align: center;
 }
+
+tr:nth-child(even) {
+    background-color: rgba(0,95,105,0.2) !important;
+}
+
+.oj-button-button{
+    background: #004a52 !important;
+}
+
+.oj-button-button .oj-button-text,.oj-button-button .oj-fwk-icon{
+    color:#fff !important;
+}
+
+.oj-collapsible-header{
+    background: #1e5799; /* Old browsers */
+    background: -moz-linear-gradient(top,  #1e5799 0%, #2989d8 50%, #207cca 51%, #7db9e8 100%); /* FF3.6-15 */
+    background: -webkit-linear-gradient(top,  #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom,  #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#1e5799', endColorstr='#7db9e8',GradientType=0 ); /* IE6-9 */
+    font-size: 2em !important;
+}
