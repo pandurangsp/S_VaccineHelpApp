@@ -5,68 +5,80 @@ onmessage = (event) => {
 
     console.log("DISTRICTS RECVD. ", districts);
     let currentDistrict = "";
-    let currentDate = "";
-    let vaccinesArr = [];
+    let currentDistrictid="";
     let dstProcessedCount = 0;
 
-    getDoseAvlblty = (date, sessions) => {
-        currentDate = date;
+    getDoseAvlblty = (district, centers) => {
         return new Promise(resolve => {
-            let vals = sessions.filter(session => {
-                if (session.date == date) {
-                    return session;
-                }
-            })
+            let obj = {};
+            obj["district"] = district;
+            obj["id"]=currentDistrictid;
+            for (let dt of getCurrentWeekDates().dateCols) {
+                obj[dt] = [];
+            }
 
-            if (vals.length > 0) {
-                if (vals.length == 1) {
-                    let obj = {};
-                    obj["name"] = vals[0].vaccine
-                    obj["avlbl"] = vals[0].available_capacity;
-                    obj["date"] = vals[0].date;
-                    obj["district"] = currentDistrict;
-                    obj["age"] = vals[0].min_age_limit;
-                    obj["sessions"] = [...vals];
-                    
-                    setTimeout(() => resolve([obj]), 300);
-                }
-                else {
-                    for (session of vals) {
-                        let vaccIndex = vaccinesArr.findIndex(vacc => {
-                            return (vacc.age == session.min_age_limit) && (vacc.name == session.vaccine) && (vacc.date == session.date) && (vacc.district == currentDistrict)
-                        })
-                        if (vaccIndex == -1) {
-                            let obj = {};
-                            obj["name"] = session.vaccine
-                            obj["avlbl"] = session.available_capacity;
-                            obj["date"] = session.date;
-                            obj["district"] = currentDistrict;
-                            obj["age"] = session.min_age_limit;
-                            obj["sessions"] = [...vals];
-                            vaccinesArr.push(obj);
+            centers.map(center => { 
+                for (let dt of getCurrentWeekDates().dateCols) {
+                    //Get all sessions for that date
+                    let dtSessions=center.sessions.filter(session=>session.date==dt);
+                    obj["sessions"]=center.sessions;
+
+                    console.log("SESSION for ",dt," are ",dtSessions);
+                    for(let ssn of dtSessions){
+
+                        //Check if vaccine details exist, vaccine given for that particular age, for that particular date
+                        let indx=obj[dt].findIndex(vaccSsn=>{
+                            return ((vaccSsn.vaccine==ssn.vaccine) && (vaccSsn.age==ssn.min_age_limit))
+                        });
+
+                        if(indx==-1){
+                            //Add new vaccine details, vaccine given for that particular age, for that particular date
+                            obj[dt].push({"vaccine":ssn.vaccine,"d1":ssn.available_capacity_dose1,"d2":ssn.available_capacity_dose2,"total":ssn.available_capacity,"age":ssn.min_age_limit});
                         }
-                        else {
-                            let vacc = vaccinesArr[vaccIndex];
-                            vacc.avlbl += session.available_capacity;
-                            vaccinesArr.splice(vaccIndex, 1, vacc);
+                        else{
+                            //Add to the existing vaccine detail, vaccine given for that particular age, for that particular date
+                            let vaccObj=obj[dt][indx];
+                            console.log("BEFOR UPDATING ",vaccObj)
+                            vaccObj["d1"]+=ssn.available_capacity_dose1;
+                            vaccObj["d2"]+=ssn.available_capacity_dose2;
+                            vaccObj["total"]+=ssn.available_capacity;
+                            vaccObj["age"]=ssn.min_age_limit;
+                            obj[dt].splice(indx,1,vaccObj);
+                            console.log("AFTER UPDATING ",obj[dt][indx]);
                         }
                     }
-                    setTimeout(() => resolve(vaccinesArr), 300);
-                }
-            }
-            else {
-                let obj = {};
-                obj["name"] = null;
-                obj["district"] = currentDistrict;
-                obj["date"] = currentDate;
-                obj["sessions"] = [];
-                setTimeout(() => resolve([obj]), 300);
-            }
-        })
+                }                
+            });
+            dstProcessedCount+=1;
+            setTimeout(()=>resolve(obj),300);
+        });
     }
 
+    let isComplete = false;
 
+    getDosesData = (distrctIndx) => {
+        console.log("DISTRICT IS ", districts[distrctIndx]);
+        currentDistrict = districts[distrctIndx].district.label;
+        currentDistrictid = districts[distrctIndx].district.value;
 
+        getDoseAvlblty(currentDistrict, districts[distrctIndx].centers).then(data => {
+            districtRows.push(data);
+            console.log("DISTRICTS DATA ",districtRows," isComplete ",isComplete);
+            postMessage({ allDistricts: districtRows, isComplete, dstProcessedCount });
+
+            if (distrctIndx < districts.length - 1) {
+                if(distrctIndx == districts.length - 2)
+                    isComplete=true;
+                else    
+                    isComplete=false;
+
+                distrctIndx += 1;
+                getDosesData(distrctIndx);
+            }
+            
+        })
+    }
+    
     getCurrentWeekDates = () => {
         let weekBgnDt = new Date();
         let weekEndDt = new Date();
@@ -78,14 +90,14 @@ onmessage = (event) => {
         }
         weekEndDt = weekEndDt.setDate(weekBgnDt.getDate() + 6)
 
-        wBeginDate = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(weekBgnDt)).replace(/\//ig, '-');
-        wEndDate = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(weekEndDt)).replace(/\//ig, '-');
+        wBeginDate = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(weekBgnDt)).replace(/\//ig, '-');
+        wEndDate = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(weekEndDt)).replace(/\//ig, '-');
 
-        wBeginDateLng = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: 'long' }).format(weekBgnDt)).replace(/\//ig, '-');
-        wEndDateLng = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: 'long' }).format(weekEndDt)).replace(/\//ig, '-');
+        wBeginDateLng = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: 'long' }).format(weekBgnDt)).replace(/\//ig, '-');
+        wEndDateLng = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: 'long' }).format(weekEndDt)).replace(/\//ig, '-');
 
         for (let i = weekBgnDt; i <= weekEndDt;) {
-            dateCols.push((new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(i)).replace(/\//ig, '-'));
+            dateCols.push((new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(i)).replace(/\//ig, '-'));
             i = weekBgnDt.setDate(weekBgnDt.getDate() + 1)
         }
 
@@ -93,69 +105,6 @@ onmessage = (event) => {
         return { wBeginDate, wBeginDateLng, wEndDate, wEndDateLng, dateCols };
     }
 
-    let dates = null;
-    let districtSessions = [];
-    let sessions = [];
-    let isComplete = false;
+    getDosesData(0);
 
-    getDosesData = (dateIndx, distrctIndx) => {
-        if (!dates) {
-            dates = getCurrentWeekDates().dateCols;
-            districtRows = districts.map(district => {
-                let obj = {};
-                obj["district"] = district.district.label;
-                dates.map(date => {
-                    obj[date] = "";
-                })
-                return obj;
-            })
-            console.log("districtRows ", districtRows);
-        }
-        console.log("DISTRICT IS ",districts[distrctIndx]);
-        currentDistrict = districts[distrctIndx].district.label;
-        currentDistrictid = districts[distrctIndx].district.value;
-        console.log("currentDistrictid ",currentDistrictid);
-        districts[distrctIndx].centers.map(center => {
-            sessions = [...sessions, ...center.sessions]
-        });
-
-        getDoseAvlblty(dates[dateIndx], sessions).then(data => {
-            console.log("DATA IS ", data)
-
-            for (let i = 0; i < districtRows.length; i++) {
-                if ((districtRows[i].district == currentDistrict)) {
-                    let rows = data.filter(dstrct => {
-                        if ((dstrct.district == currentDistrict) && (dstrct.date == currentDate)) {
-                            return dstrct
-                        }
-                    });
-                    console.log("ROWS ARE ", rows);
-
-                    districtRows[i][currentDate] = rows.map(row => row)
-                }
-                if ((districtRows[i].district == currentDistrict)) {
-                    districtRows[i]["id"] = currentDistrictid;
-                }
-            }
-
-            console.log("DISTRICTS ARE ", districtRows);
-            postMessage({ allDistricts: districtRows, isComplete, dstProcessedCount });
-            if (dateIndx < dates.length - 1) {
-                dateIndx += 1;
-                if ((distrctIndx == districts.length - 1) && (dateIndx == dates.length - 1)) {
-                    isComplete = true;
-                }
-                getDosesData(dateIndx, distrctIndx, isComplete);
-            }
-            else {
-                if (distrctIndx < districts.length - 1) {
-                    dateIndx = 0;
-                    distrctIndx += 1;
-                    dstProcessedCount += 1;
-                    getDosesData(dateIndx, distrctIndx, isComplete);
-                }
-            }
-        })
-    }
-    getDosesData(0, 0);
 }

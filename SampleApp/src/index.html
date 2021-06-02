@@ -61,17 +61,19 @@
 
 
   <oj-switcher value="{{selectedView}}">
-    <div slot="p" style="padding:1.5em;" class="oj-flex oj-sm-flex-direction-column oj-sm-align-items-center oj-sm-justify-content-center oj-sm-flex-items-initial">
+    <div slot="p" class="oj-flex oj-sm-flex-direction-column oj-sm-align-items-center oj-sm-justify-content-center oj-sm-flex-items-initial">
       <div class="oj-flex-item oj-sm-12 oj-sm-justify-content-center">
         <div class="oj-flex oj-sm-justify-content-center">
-          <oj-collapsible id="pincdeControlsAcc" expanded>
-            <h3 slot="header"></span>Filters</h3>
-            <oj-input-text class="oj-sm-6" value="{{pincode}}" on-raw-value-changed="[[resetPinCodeData]]"
-              on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
-            <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get
-              Details
-            </oj-button>
-          </oj-collapsible>
+          <oj-accordion id="fltrsControlAcc" style="width:100%;">
+            <oj-collapsible id="pincdeControlsAcc" expanded style="text-align:center;">
+              <h3 slot="header"></span>Filters</h3>
+              <oj-input-text class="oj-sm-6" value="{{pincode}}" on-raw-value-changed="[[resetPinCodeData]]"
+                on-value-changed="[[pincodeChangeLsnr]]" disabled="{{isBusy}}"></oj-input-text>
+              <oj-button style="margin-left:1em;" class="oj-sm-2" on-oj-action="[[getVaccineDetails]]" disabled="{{isBusy}}">Get
+                Details
+              </oj-button>
+            </oj-collapsible>
+          </oj-accordion>
         </div>
       </div>
       <oj-bind-if test="[[isBusy()]]">
@@ -157,8 +159,8 @@
           </div>
         </oj-bind-if>
 
-        <oj-bind-if test="[[!isTblBusy()]]">
-          <oj-table style="width:100%;max-height: 25em;margin-top:5em;" class="oj-flex-item" columns="{{districtTblCols}}"
+        <oj-bind-if test="[[!isTblBusy() && (dstSessions().length>0)]]">
+          <oj-table style="width:100%;max-height: 50em;margin-top:5em;" class="oj-flex-item" columns="{{districtTblCols}}"
             data="{{dstSessionsPDP}}">
             <template slot="district" data-oj-as="item">
               <oj-button chroming="borderless" on-oj-action="[[openSessionPopup]]" :id="[[item.data]]" display="all">
@@ -169,24 +171,40 @@
             <template slot="avlbltySlot" data-oj-as="item">
               <oj-bind-if test="[[item.data.length>0]]">
                 <oj-bind-for-each data="[[new adp(item.data)]]">
-
                   <template>
-                    <oj-bind-if test="[[$current.data.name]]">
-                      <div :style="[[ {background:$current.data.avlbl>0 ? 'green':'red','color':'#fff','textAlign':'center'} ]]">
-                        <p>
-                          <oj-bind-text value="[['Age '+$current.data.age+'- Slots '+$current.data.avlbl]]"></oj-bind-text>
-                        </p>
-                        <p>
-                          <oj-bind-text value="[[$current.data.name]]"></oj-bind-text>
-                        </p>
-                      </div>
-                    </oj-bind-if>
-                    <oj-bind-if test="[[!$current.data.name]]">
-                      <div>NA</div>
-                    </oj-bind-if>
-
+                    <table border="1" style="margin-bottom:0.5em;">
+                      <tr>
+                        <th>D 1</th>
+                        <th>D 2</th>
+                        <th>Total</th>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:$current.data.d1==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[$current.data.d1]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:$current.data.d2==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[$current.data.d2]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <div class="oj-flex-item" :style="[[{fontWeight:'bold',color:'#fff',background:$current.data.total==0 ? 'red':'green',padding:'0.5em',mminHeight:'2.7em'}]]">
+                            <oj-bind-text value="[[$current.data.total]]"></oj-bind-text>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:0.7em;margin:0;font-weight:bold;text-align:center;margin-bottom:0.5em;">
+                      <oj-bind-text value="[['Age '+$current.data.age]]"></oj-bind-text>-<oj-bind-text value="[[$current.data.vaccine]]"></oj-bind-text>
+                    </p>
                   </template>
                 </oj-bind-for-each>
+              </oj-bind-if>
+
+              <oj-bind-if test="[[item.data.length==0]]">
+                <div style="text-align:center;">NA</div>
               </oj-bind-if>
             </template>
             <oj-paging-control id="paging" data="[[dstSessionsPDP]]" page-size="10" slot="bottom">
@@ -200,9 +218,6 @@
         <oj-collapsible id="clspsbl1" expanded>
           <h3 slot="header"></span>Controls</h3>
           <oj-toolbar>
-            <oj-button on-oj-action="[[getBengaluruVaccines]]">
-              Get Details
-            </oj-button>
             <oj-radioset labelled-by="mainlabelid" class="oj-choice-direction-row" slot="value" value="{{blrVaccType}}"
               on-value-changed="[[changeBlrTblData]]" disabled="{{blrTblBusy}}">
               <oj-option value="18">18+ > 0</oj-option>
@@ -217,56 +232,58 @@
             <oj-button on-oj-action="[[stopBlRefresh]]" style="margin-left:3em;" disabled="{{blrTblBusy}}">
               Stop Refresh
             </oj-button>
-            <oj-input-text clear-icon="always" style="max-width:21em;margin-left:2em;" raw-vaue="{{filterBlrVacc}}" label-hint="Filter by address"
-              label-edge="inside" on-raw-value-changed="[[filterByAddress]]" disabled="{{blrTblBusy}}"></oj-input-text>
+            <oj-input-text clear-icon="always" style="max-width:21em;margin-left:2em;" raw-vaue="{{filterBlrVacc}}"
+              label-hint="Filter by address" label-edge="inside" on-raw-value-changed="[[filterByAddress]]" disabled="{{blrTblBusy}}"></oj-input-text>
           </oj-toolbar>
         </oj-collapsible>
 
       </oj-accordion>
       <oj-bind-if test="[[blrTblBusy]]">
-        <oj-progress-circle value="-1" size='lg' value='-1' style="margin-top:5em;margin-left:auto;"></oj-progress-circle>
+        <oj-progress-circle value="-1" size='lg' value='-1' style="margin-top:5em;margin-left:50vw;"></oj-progress-circle>
       </oj-bind-if>
       <oj-bind-if test="[[!blrTblBusy()]]">
-        <oj-table columns="[[weeksDatesColumns]]" data="{{blrTblData}}" style="width:100%;">
+        <oj-table columns="[[weeksDatesColumns]]" data="{{vaccTblPDP}}" style="width:100%;">
           <template slot="valRenderer" data-oj-as="cell">
             <div>
-              <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
-                <div class="oj-flex oj-sm-flex-items-initial oj-sm-justify-content-center">
-                  <table border="1">
-                    <tr>
-                      <th>D 1</th>
-                      <th>D 2</th>
-                      <th>Total</th>
-                    </tr>
-                    <tr>
-                      <td>
-                        <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[3]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[3]]]"></oj-bind-text>
-                        </p>
-                      </td>
-                      <td>
-                        <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[4]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[4]]]"></oj-bind-text>
-                        </p>
-                      </td>
-                      <td>
-                        <div class="oj-flex-item" :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]==0 ? 'red':'green',padding:'0.5em',mminHeight:'2.7em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
-                <p style="font-size:0.7em;margin:0;font-weight:bold;">
-                  <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
-                </p>
+              <oj-bind-if test="[[cell.data.length>0]]">
+                <oj-list-view data="[[new adp(cell.data)]]">
+                  <template slot="itemTemplate" data-oj-as="item">
+                    <table border="1">
+                      <tr>
+                        <th>D 1</th>
+                        <th>D 2</th>
+                        <th>Total</th>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[3]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[3]]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[4]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[4]]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <div class="oj-flex-item" :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[0]==0 ? 'red':'green',padding:'0.5em',mminHeight:'2.7em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[0]]]"></oj-bind-text>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:0.7em;margin:0;font-weight:bold;margin-bottom:0.5em;">
+                      <oj-bind-text value="[['Age '+item.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[item.data.split('-')[2]]]"></oj-bind-text>
+                    </p>
+                  </template>
+                </oj-list-view>
               </oj-bind-if>
-              <oj-bind-if test="[[!cell.data || cell.data.indexOf('-')==-1]]">
+              <oj-bind-if test="[[cell.data.length==0]]">
                 <div style="font-weight:bold;">NA</div>
               </oj-bind-if>
             </div>
           </template>
-          <oj-paging-control data="{{blrTblData}}" page-size="7" slot="bottom"></oj-paging-control>
+          <oj-paging-control data="{{vaccTblPDP}}" page-size="7" slot="bottom"></oj-paging-control>
         </oj-table>
       </oj-bind-if>
     </div>
@@ -275,7 +292,7 @@
     <div slot="body">
       <oj-accordion id="dstTblControlsAcc">
         <oj-collapsible id="cllspbl2" expanded>
-            <h3 slot="header"></span>Controls</h3>
+          <h3 slot="header"></span>Controls</h3>
           <oj-toolbar>
             <oj-radioset labelled-by="mainlabelid" class="oj-choice-direction-row" slot="value" value="{{vaccAgeLimit}}"
               on-value-changed="[[changeVaccTblData]]" disabled="{{vaccTblBusy}}">
@@ -291,8 +308,8 @@
             <oj-button on-oj-action="[[stopDstTblRefresh]]" style="margin-left:3em;">
               Stop Refresh
             </oj-button>
-            <oj-input-text clear-icon="always" clear-icon="always" style="max-width:21em;margin-left:2em;" raw-vaue="{{filterDstVacc}}" label-hint="Filter by address"
-              label-edge="inside" on-raw-value-changed="[[filterByAddressDst]]" disabled="{{vaccTblBusy}}"></oj-input-text>
+            <oj-input-text clear-icon="always" clear-icon="always" style="max-width:21em;margin-left:2em;" raw-vaue="{{filterDstVacc}}"
+              label-hint="Filter by address" label-edge="inside" on-raw-value-changed="[[filterByAddressDst]]" disabled="{{vaccTblBusy}}"></oj-input-text>
           </oj-toolbar>
         </oj-collapsible>
 
@@ -305,38 +322,40 @@
         <oj-table columns="[[weeksDatesColumns]]" data="{{vaccTblPDP}}" style="width:100%;">
           <template slot="valRenderer" data-oj-as="cell">
             <div>
-              <oj-bind-if test="[[cell.data && cell.data.indexOf('-')>-1]]">
-                <div class="oj-flex oj-sm-flex-items-initial oj-sm-justify-content-center">
-                  <table border="1">
-                    <tr>
-                      <th>D 1</th>
-                      <th>D 2</th>
-                      <th>Total</th>
-                    </tr>
-                    <tr>
-                      <td>
-                        <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[3]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[3]]]"></oj-bind-text>
-                        </p>
-                      </td>
-                      <td>
-                        <p :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[4]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[4]]]"></oj-bind-text>
-                        </p>
-                      </td>
-                      <td>
-                        <div class="oj-flex-item" :style="[[{fontWeight:'bold',color:'#fff',background:cell.data.split('-')[0]==0 ? 'red':'green',padding:'0.5em',mminHeight:'2.7em'}]]">
-                          <oj-bind-text value="[[cell.data.split('-')[0]]]"></oj-bind-text>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
-                <p style="font-size:0.7em;margin:0;font-weight:bold;">
-                  <oj-bind-text value="[['Age '+cell.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[cell.data.split('-')[2]]]"></oj-bind-text>
-                </p>
+              <oj-bind-if test="[[cell.data.length>0]]">
+                <oj-list-view data="[[new adp(cell.data)]]">
+                  <template slot="itemTemplate" data-oj-as="item">
+                    <table border="1">
+                      <tr>
+                        <th>D 1</th>
+                        <th>D 2</th>
+                        <th>Total</th>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[3]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[3]]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <p :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[4]==0 ? 'red':'green',margin:0,padding:'0.5em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[4]]]"></oj-bind-text>
+                          </p>
+                        </td>
+                        <td>
+                          <div class="oj-flex-item" :style="[[{fontWeight:'bold',color:'#fff',background:item.data.split('-')[0]==0 ? 'red':'green',padding:'0.5em',mminHeight:'2.7em'}]]">
+                            <oj-bind-text value="[[item.data.split('-')[0]]]"></oj-bind-text>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:0.7em;margin:0;font-weight:bold;margin-bottom:0.5em;">
+                      <oj-bind-text value="[['Age '+item.data.split('-')[1]]]"></oj-bind-text>-<oj-bind-text value="[[item.data.split('-')[2]]]"></oj-bind-text>
+                    </p>
+                  </template>
+                </oj-list-view>
               </oj-bind-if>
-              <oj-bind-if test="[[!cell.data || cell.data.indexOf('-')==-1]]">
+              <oj-bind-if test="[[cell.data.length==0]]">
                 <div style="font-weight:bold;">NA</div>
               </oj-bind-if>
             </div>

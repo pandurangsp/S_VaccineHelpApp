@@ -57,7 +57,7 @@
 
 require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovider', 'ojs/ojpagingdataproviderview',
   './getDistrictSessions', 'ojs/ojpagingcontrol', 'ojs/ojradioset', 'ojs/ojlabel', 'ojs/ojinputtext', 'ojs/ojaccordion',
-  'ojs/ojmessages', 'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle',
+  'ojs/ojmessages', 'ojs/ojknockout', 'ojs/ojinputtext', 'ojs/ojbutton', 'ojs/ojtable', 'ojs/ojprogress-circle', 'ojs/ojlistview',
   'ojs/ojnavigationlist', 'ojs/ojswitcher', 'ojs/ojselectsingle', 'ojs/ojtoolbar', 'ojs/ojprogress-bar', 'ojs/ojdialog'
 ],
   function (Bootstrap, Context, ko, ArrayDataProvider, PagingDataProviderView, getDistrictSessions) {
@@ -103,11 +103,15 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.dstProcessedCount = ko.observable(0);
               this.alarmInterval = null;
 
-              this.avlbl45 = ko.observableArray([]);
-              this.unAvlbl45 = ko.observableArray([]);
-              this.avlbl18 = ko.observableArray([]);
-              this.unAvlbl18 = ko.observableArray([]);
-              this.vaccAgeLimit = ko.observable(18);
+              this.all18Arr = ko.observableArray([]);
+              this.unavlbl18Arr = ko.observableArray([]);
+              this.all18PDP = ko.observable(new PagingDataProviderView(new ArrayDataProvider([])));
+
+              this.all45Arr = ko.observableArray([]);
+              this.unavlbl45Arr = ko.observableArray([]);
+              this.all45PDP = ko.observable(new PagingDataProviderView(new ArrayDataProvider([])));
+
+              this.vaccAgeLimit = ko.observable("18");
               this.vaccTblBusy = ko.observable(false);
               this.vaccTblPDP = ko.observable();
 
@@ -115,14 +119,16 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.isTblBusy(false);
                 let session = this.dstSessions()[0];
                 console.log("SESSION OBJ ", session);
-                let cols = Object.keys(session).map(ssn => {
+                let cols = [];
+
+                for (let ssn of Object.keys(session)) {
                   if ((ssn !== "district") && (ssn !== 'sessions') && (ssn !== 'id')) {
-                    return { "headerText": ssn, "field": ssn, "template": "avlbltySlot" }
+                    cols.push({ "headerText": ssn, "field": ssn, "template": "avlbltySlot" })
                   }
                   else if (ssn == 'district') {
-                    return { "headerText": ssn, "template": "district", "field": ssn, "style": "white-space:normal;word-wrap:break-word; text-align: left;vertical-align: middle;font-size:1em;" }
+                    cols.push({ "headerText": ssn, "template": "district", "field": ssn, "style": "white-space:normal;word-wrap:break-word; text-align: left;vertical-align: middle;font-size:1em;" });
                   }
-                });
+                }
 
                 this.districtTblCols(cols);
                 console.log("TBL COLS ARE ", this.districtTblCols());
@@ -224,10 +230,11 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.blrTblInterval = null;
 
               this.initADPs = () => {
-                this.avlbl45([]);
-                this.unAvlbl45([]);
-                this.avlbl18([]);
-                this.unAvlbl18([]);
+                this.all18Arr([]);
+                this.all18PDP(new PagingDataProviderView(new ArrayDataProvider([])));
+
+                this.all45Arr([]);
+                this.all45PDP(new PagingDataProviderView(new ArrayDataProvider([])));
               }
 
               this.onTabChange = (evt) => {
@@ -239,6 +246,9 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                   this.stopDstTblRefresh();
                   this.initADPs()
                   this.state("");
+                  this.dstSessions([]);
+                  this.dstSessionsPDP(new PagingDataProviderView(new ArrayDataProvider([])));
+                  this.vaccAgeLimit("18");
                 }
                 if (evt.detail.value == 'b') {
                   this.stopBlRefresh();
@@ -329,11 +339,11 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.weeksDatesColumns = [];
                 let date = new Date(frmDt);
                 this.weeksDatesColumns.push({ "headerText": "Address", "field": "address", "template": "addressRenderer", "sortable": "disabled", "style": "white-space:normal;word-wrap:break-word; text-align: center;vertical-align: middle;width:20%;" })
-                let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
+                let dt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(date);
                 this.weeksDatesColumns.push({ headerText: dt.replace(/\//ig, '-'), field: dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
                 for (let i = 0; i <= 5; i++) {
                   date.setDate(date.getDate() + 1);
-                  let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(date);
+                  let dt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(date);
                   this.weeksDatesColumns.push({ headerText: dt.replace(/\//ig, '-'), field: dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
                 }
               }
@@ -360,7 +370,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                     this.centers([]);
                     //
                     var w = new Worker('./js/worker/getVaccineSessions.js');
-                    let dt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(this.frmDate);
+                    let dt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(this.frmDate);
                     this.getDataHandler = setInterval(() => { //this.isBusy(true); 
                       w.postMessage({ 'pincode': this.pincode(), 'date': dt.replace(/\//ig, '-'), "template": "valRenderer", "sortable": "disabled" });
                     }, 10000);
@@ -409,7 +419,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
                         this.vaccineSessionsPDP(new PagingDataProviderView(new ArrayDataProvider(this.vaccineSessions())));
                         if (centers.length > 0) {
-                          this.centers(centers);                          
+                          this.centers(centers);
                         }
                         else {
                           this.stopInterval();
@@ -502,10 +512,14 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.getDistrictData = () => {
                 getDistrictSessions(this.currentDistrictID()).then(data => {
                   console.log("DISTRICT SESSIONS ", data);
-                  this.avlbl18(data["18"]);
-                  this.unAvlbl18(data["unavlbl18"]);
-                  this.avlbl45(data["45"]);
-                  this.unAvlbl45(data["unavlbl45"]);
+                  if (data["18-d1"] > 0) {
+                    var audio = new Audio('./media/Alarm07.wav');
+                    audio.play();
+                  }
+                  this.all18Arr(data['18']);
+                  this.all45Arr(data['45']);
+                  this.unavlbl18Arr(data['unavlbl18']);
+                  this.unavlbl45Arr(data['unavlbl45']);
                   this.populateVaccTblData(this.vaccAgeLimit());
                 }).then(() => {
                   document.getElementById('sessionPopup').open()
@@ -518,7 +532,6 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.refreshRate = ko.observable(null);
 
               this.refreshRates = [
-                { value: 5000, label: "5 Seconds" },
                 { value: 10000, label: "10 Seconds" },
                 { value: 15000, label: "15 Seconds" },
                 { value: 20000, label: "20 Seconds" },
@@ -553,25 +566,27 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
 
               this.stopDstTblRefresh = () => {
                 this.refreshRateDst(-1);
-                this.vaccAgeLimit(18);
+                this.vaccAgeLimit("18");
                 clearInterval(this.vaccDstTblInterval);
               }
 
               this.filterBlrVacc = ko.observable();
+
               this.filterByAddress = (evt) => {
                 let val = evt.detail.value;
                 if (val.length > 0) {
-                  let rows = this.blrTblData().dataProvider.data.filter(row => row.address.toLowerCase().indexOf(val.toLowerCase()) > -1);
-                  this.blrTblData(new PagingDataProviderView(new ArrayDataProvider(rows)))
+                  let rows = this.vaccTblPDP().dataProvider.data.filter(row => row.address.toLowerCase().indexOf(val.toLowerCase()) > -1);
+                  this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(rows)))
                 }
                 else {
-                  this.populateBlrTblData(this.blrVaccType());
+                  this.populateVaccTblData(this.blrVaccType());
                 }
               }
 
 
               this.filterDstVacc = ko.observable();
               this.filterByAddressDst = (evt) => {
+                
                 let val = evt.detail.value;
                 if (val.length > 0) {
                   let rows = this.vaccTblPDP().dataProvider.data.filter(row => row.address.toLowerCase().indexOf(val.toLowerCase()) > -1);
@@ -582,36 +597,19 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 }
               }
 
-              this.populateBlrTblData = (type) => {
-                console.log("TYPE IS ", type)
-                switch (type) {
-                  case '18': this.blrTblData(new PagingDataProviderView(new ArrayDataProvider(this.avlbl18())));
-                    break;
-
-                  case 'un18': this.blrTblData(new PagingDataProviderView(new ArrayDataProvider(this.unAvlbl18())));
-                    break;
-
-                  case '45': this.blrTblData(new PagingDataProviderView(new ArrayDataProvider(this.avlbl45())));
-                    break;
-
-                  case 'un45': this.blrTblData(new PagingDataProviderView(new ArrayDataProvider(this.unAvlbl45())));
-                    break;
-                }
-              }
-
               this.populateVaccTblData = (type) => {
                 console.log("TYPE IS ", type)
                 switch (type) {
-                  case '18': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.avlbl18())));
+                  case '18': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.all18Arr())));
                     break;
 
-                  case 'un18': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.unAvlbl18())));
+                  case '45': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.all45Arr())));
                     break;
 
-                  case '45': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.avlbl45())));
+                  case 'un18': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.unavlbl18Arr())));
                     break;
 
-                  case 'un45': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.unAvlbl45())));
+                  case 'un45': this.vaccTblPDP(new PagingDataProviderView(new ArrayDataProvider(this.unavlbl45Arr())));
                     break;
                 }
               }
@@ -619,7 +617,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
               this.changeBlrTblData = (evt) => {
                 this.blrTblBusy(true);
                 let type = evt.detail.value;
-                this.populateBlrTblData(type);
+                this.populateVaccTblData(type);
                 this.blrTblBusy(false);
               }
 
@@ -634,13 +632,17 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                 this.blrTblBusy(true);
                 getDistrictSessions(294).then(data => {
                   console.log("DATA IS ", data);
-                  this.avlbl18(data["18"]);
-                  this.unAvlbl18(data["unavlbl18"]);
-                  this.avlbl45(data["45"]);
-                  this.unAvlbl45(data["unavlbl45"]);
+                  this.all18Arr(data['18']);
+                  this.all45Arr(data['45']);
+                  this.unavlbl18Arr(data['unavlbl18']);
+                  this.unavlbl45Arr(data['unavlbl45']);
+                  if (data["18-d1"] > 0) {
+                    var audio = new Audio('./media/Alarm07.wav');
+                    audio.play();
+                  }
                   this.blrTblBusy(false);
                 }).then(() => {
-                  this.populateBlrTblData(this.blrVaccType());
+                  this.populateVaccTblData(this.blrVaccType());
                 }).catch(e => {
                   clearInterval(this.blrTblInterval)
                   this.blrTblData(new PagingDataProviderView(new ArrayDataProvider([])));
@@ -657,7 +659,6 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojarraydataprovide
                   this.messages.push(errObj);
                 })
               }
-
             }
           }
 

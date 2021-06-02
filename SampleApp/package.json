@@ -1,14 +1,14 @@
 {
-  "name": "SampleApp",
+  "name": "MyVaccinatorApp",
+  "author": "Hibis Alpha",
   "version": "1.0.0",
-  "description": "An Oracle JavaScript Extension Toolkit(JET) web app",
-  "dependencies": {
-    "@oracle/oraclejet": "~10.1.0",
-    "node-wav-player": "^0.2.0"
-  },
+  "description": "My Vaccinator App v1.0",
+  "dependencies": {},
   "devDependencies": {
+    "@oracle/oraclejet": "~10.1.0",
     "@oracle/oraclejet-tooling": "~10.1.0",
     "electron": "^12.0.7",
+    "electron-builder": "^22.10.5",
     "node-fetch": "^2.6.1"
   },
   "engines": {
@@ -17,7 +17,14 @@
   "private": true,
   "scripts": {
     "prestart": "npm install",
-    "start": "ojet clean web && ojet build && electron ."
+    "start": "ojet clean web && ojet build && electron .",
+    "dist": "electron-builder build"
+  },
+  "build": {
+    "appId": "myvaccapp",
+    "win": {
+      "target": "NSIS"
+    }
   },
   "main": "main.js"
 }

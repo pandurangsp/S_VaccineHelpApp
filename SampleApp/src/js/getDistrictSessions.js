@@ -13,112 +13,150 @@ define([], function () {
                     else {
                         response.json().then(data => {
                             console.log("DATA IS ", data);
-                            let sessions45 = { "d1": 0, "d2": 0, data: [] };
-                            let sessions18 = { "d1": 0, "d2": 0, data: [] };
+
+                            let allSessions45 = [];
+                            let allSessions18 = [];
+                            let unavlbl45 = [];
+                            let unavlbl18 = [];
+                            let sessions18d1 = 0;
+                            let sessions45d1 = 0;
+                            let sessions18d2 = 0;
+                            let sessions45d2 = 0;
+
+
                             data.centers.map(center => {
-                                let address = center.name + "-" + center.pincode
-                                for (let session of center.sessions) {
-                                    session.address = address;
+                                let obj = {};
+                                obj["address"] = center.name + "-" + center.pincode;
+                                for (let dt of getCurrentWeekDates().dateCols) {
+                                    obj[dt] = [];
+                                }
+                                let addCount = 0;
+                                center.sessions.map(session => {
                                     if (session.min_age_limit == 45) {
-                                        let ssnIndx=sessions45.data.findIndex(ssn=>{
-                                            if((ssn.address==address) && (ssn.vaccine==session.vaccine)){
-                                                return ssn;
+                                        if (session.available_capacity > 0) {
+                                            addCount += 1;
+                                            if (session.available_capacity_dose1 > 0) {
+                                                sessions45d1 += 1
                                             }
-                                        });
-                                        if(ssnIndx==-1){
-                                            console.log("ADDING NEW SESSION 45 OBJ ",JSON.stringify(session));
-                                            sessions45.data.push(session)
-                                        }
-                                        else{
-                                            for(let key of Object.keys(sessions45.data[ssnIndx])){
-                                                if(!session[key]){
-                                                    console.log("UPDATING ",JSON.stringify(sessions45.data[ssnIndx])," to ",JSON.stringify(session))
-                                                    sessions45.data[ssnIndx][key]=session[key];
-                                                    console.log(session.address," ",key," ",sessions45.data[ssnIndx][key]," ",session[key])
-                                                }
-                                            }                                            
-                                        }
-                                        if(session.available_capacity_dose1>0){
-                                            sessions45.d1+=session.available_capacity_dose1
-                                        }
-                                        if(session.available_capacity_dose2>0){
-                                            sessions45.d2+=session.available_capacity_dose2
+                                            if (session.available_capacity_dose2 > 0) {
+                                                sessions45d2 += 1
+                                            }
+                                            obj[session.date].push(session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2);
                                         }
                                     }
-                                    else if (session.min_age_limit == 18) {
-                                        sessions18.data.push(session);
-                                        let ssnIndx=sessions18.data.findIndex(ssn=>{
-                                            if((ssn.address==address) && (ssn.vaccine==session.vaccine)){
-                                                return ssn;
-                                            }
-                                        });
-                                        if(ssnIndx==-1){
-                                            console.log("ADDING NEW SESSION 18 OBJ ",session);
-                                            sessions18.data.push(session)
-                                        }
-                                        else{
-                                            for(let key of Object.keys(sessions18.data[ssnIndx])){
-                                                if(!session[key]){
-                                                    console.log("UPDATING 18 OBJ ",sessions18.data[ssnIndx]," to ",session)
-                                                    sessions18.data[ssnIndx][key]=session[key];
-                                                    console.log(session.address," ",key," ",sessions18.data[ssnIndx][key]," ",session[key])
-                                                }
-                                            }                                            
-                                        }
-                                        if(session.available_capacity_dose1>0){
-                                            sessions18.d1+=session.available_capacity_dose1
-                                        }
-                                        if(session.available_capacity_dose2>0){
-                                            sessions18.d2+=session.available_capacity_dose2
+                                })
+                                if (addCount)
+                                    allSessions45.push(obj);
+                            });
+
+                            data.centers.map(center => {
+                                let obj = {};
+                                obj["address"] = center.name + "-" + center.pincode;
+                                for (let dt of getCurrentWeekDates().dateCols) {
+                                    obj[dt] = [];
+                                }
+                                let addCount = 0;
+                                center.sessions.map(session => {
+                                    if (session.min_age_limit == 45) {
+                                        addCount += 1;
+                                        if (session.available_capacity == 0) {
+                                            obj[session.date].push(session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2);
                                         }
                                     }
-                                }
+                                })
+                                if (addCount)
+                                    unavlbl45.push(obj);
                             });
 
-                            let unavlablSessions45 = [];
-                            let sessions45Arr = [];
-                            sessions45.data.map(session => {
+                            console.log("ALL SESSIONS 45 ", allSessions45);
+                            console.log("UNAVLBL 45 ", unavlbl45);
+                            console.log("Dose 1 ", sessions45d1);
+                            console.log("Dose 2 ", sessions45d2);
+
+                            data.centers.map(center => {
                                 let obj = {};
-
-                                obj["address"] = session.address;
-
-                                obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2;
-
-                                if (session.available_capacity > 0) {
-                                   sessions45Arr.push(obj);
+                                obj["address"] = center.name + "-" + center.pincode;
+                                for (let dt of getCurrentWeekDates().dateCols) {
+                                    obj[dt] = [];
                                 }
-                                else {
-                                    unavlablSessions45.push(obj)
-                                }
-
+                                let addCount = 0;
+                                center.sessions.map(session => {
+                                    if (session.min_age_limit == 18) {
+                                        if (session.available_capacity > 0) {
+                                            addCount += 1;
+                                            if (session.available_capacity_dose1 > 0) {
+                                                sessions18d1 += 1
+                                            }
+                                            if (session.available_capacity_dose2 > 0) {
+                                                sessions18d2 += 1
+                                            }
+                                            obj[session.date].push(session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2);
+                                        }
+                                    }
+                                })
+                                if (addCount)
+                                    allSessions18.push(obj);
                             });
 
-                            let unavlablSessions18 = [];
-                            let sessions18Arr = [];
-                            sessions18.data.map(session => {
+                            data.centers.map(center => {
                                 let obj = {};
-
-                                obj["address"] = session.address;
-
-                                obj[session.date] = session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2;
-
-                                if (session.available_capacity > 0) {                                   
-                                    sessions18Arr.push(obj);
+                                obj["address"] = center.name + "-" + center.pincode;
+                                for (let dt of getCurrentWeekDates().dateCols) {
+                                    obj[dt] = [];
                                 }
-                                else{
-                                    unavlablSessions18.push(obj);
-                                }
+                                let addCount = 0;
+                                center.sessions.map(session => {
+                                    if (session.min_age_limit == 18) {
+                                        addCount += 1;
+                                        if (session.available_capacity == 0) {
+                                            obj[session.date].push(session.available_capacity + "-" + session.min_age_limit + "-" + session.vaccine + "-" + session.available_capacity_dose1 + "-" + session.available_capacity_dose2);
+                                        }
+                                    }
+                                })
+                                if (addCount)
+                                    unavlbl18.push(obj);
                             });
 
-                            let summary={18:sessions18Arr,45:sessions45Arr,"unavlbl45":unavlablSessions45,"unavlbl18":unavlablSessions18,"18-d1":sessions18.d1,"18-d2":sessions18.d2,"45-d1":sessions45.d1,"45-d2":sessions18.d2};
+                            console.log("ALL SESSIONS 18 ", allSessions18);
+                            console.log("UNAVLBL 18 ", unavlbl18);
+                            console.log("Dose 1 ", sessions18d1);
+                            console.log("Dose 2 ", sessions18d2);
+
+                            let summary = { "18": allSessions18, "45": allSessions45, "18-d1": sessions18d1, "18-d2": sessions18d2, "45-d1": sessions45d1, "45-d2": sessions45d2, unavlbl18, unavlbl45 };
                             resolve(summary);
                         });
-
                     }
                 }).catch(e => {
                     reject(e)
                 })
         })
     }
+
+    getCurrentWeekDates = () => {
+        let weekBgnDt = new Date();
+        let weekEndDt = new Date();
+        let wBeginDateLng, wEndDateLng, diffDays, dateCols = [];
+
+        if (weekBgnDt.getDay() > 0) {
+            diffDays = 0 - weekBgnDt.getDay();
+            //weekBgnDt.setDate(weekBgnDt.getDate() + diffDays)
+        }
+        weekEndDt = weekEndDt.setDate(weekBgnDt.getDate() + 6)
+
+        wBeginDate = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(weekBgnDt)).replace(/\//ig, '-');
+        wEndDate = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(weekEndDt)).replace(/\//ig, '-');
+
+        wBeginDateLng = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: 'long' }).format(weekBgnDt)).replace(/\//ig, '-');
+        wEndDateLng = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: 'long' }).format(weekEndDt)).replace(/\//ig, '-');
+
+        for (let i = weekBgnDt; i <= weekEndDt;) {
+            dateCols.push((new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(i)).replace(/\//ig, '-'));
+            i = weekBgnDt.setDate(weekBgnDt.getDate() + 1)
+        }
+
+
+        return { wBeginDate, wBeginDateLng, wEndDate, wEndDateLng, dateCols };
+    }
+
     return getDistrictData;
 })

@@ -7,7 +7,7 @@ onmessage = (event) => {
     let getDistrictData = (district) => {
         currentDistrict=district;
         return new Promise(async (resolve) => {
-            let todayDate = (new Intl.DateTimeFormat('en-GB', { day: 'numeric', year: 'numeric', month: '2-digit' }).format(new Date())).replace(/\//ig, '-');
+            let todayDate = (new Intl.DateTimeFormat('en-GB', { day: '2-digit', year: 'numeric', month: '2-digit' }).format(new Date())).replace(/\//ig, '-');
             await fetch(`https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=${district.value}&date=${todayDate}`).then(response => {
                 setTimeout(() => resolve(response.json()), 500)
             })
